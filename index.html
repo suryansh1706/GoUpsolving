@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Codeforces Upsolve Tracker</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      #root {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .upsolve-tracker {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      }
+
+      .tracker-header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .tracker-header h1 {
+        color: #333;
+        font-size: 2.5em;
+        margin-bottom: 10px;
+      }
+
+      .tracker-header p {
+        color: #666;
+        font-size: 1.1em;
+      }
+
+      .search-section {
+        margin-bottom: 30px;
+      }
+
+      .input-group {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+
+      .search-input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 1em;
+        transition: border-color 0.3s;
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .search-button {
+        padding: 12px 30px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1em;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+
+      .search-button:hover:not(:disabled) {
+        transform: translateY(-2px);
+      }
+
+      .search-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .error-message {
+        color: #d32f2f;
+        background: #ffebee;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-top: 10px;
+      }
+
+      .stats-section {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+      }
+
+      .stat-card {
+        background: #f5f5f5;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+        border-left: 4px solid #667eea;
+      }
+
+      .stat-label {
+        display: block;
+        color: #666;
+        font-size: 0.9em;
+        margin-bottom: 8px;
+      }
+
+      .stat-value {
+        display: block;
+        font-size: 2em;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .refresh-button {
+        padding: 10px 20px;
+        background: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      .refresh-button:hover {
+        background: #45a049;
+      }
+
+      .filters-section {
+        background: #f9f9f9;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+
+      .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 150px;
+      }
+
+      .filter-group label {
+        font-weight: 600;
+        color: #333;
+        font-size: 0.9em;
+      }
+
+      .filter-group select,
+      .filter-input {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 0.95em;
+      }
+
+      .filter-group select:focus,
+      .filter-input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .tag-filter {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tag-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9em;
+      }
+
+      .tag-checkbox input {
+        cursor: pointer;
+      }
+
+      .problems-section {
+        margin-top: 30px;
+      }
+
+      .problems-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+      }
+
+      .problem-card {
+        display: block;
+        padding: 20px;
+        background: white;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.3s;
+        cursor: pointer;
+      }
+
+      .problem-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        border-color: #667eea;
+      }
+
+      .problem-card.status-attempted {
+        border-left: 4px solid #ff9800;
+      }
+
+      .problem-card.status-not_attempted {
+        border-left: 4px solid #2196f3;
+      }
+
+      .problem-card.status-upsolved {
+        border-left: 4px solid #4caf50;
+      }
+
+      .problem-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 12px;
+        gap: 10px;
+      }
+
+      .problem-name {
+        font-size: 1.1em;
+        font-weight: 600;
+        color: #333;
+        flex: 1;
+      }
+
+      .status-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .status-badge.status-attempted {
+        background: #fff3e0;
+        color: #e65100;
+      }
+
+      .status-badge.status-not_attempted {
+        background: #e3f2fd;
+        color: #1565c0;
+      }
+
+      .status-badge.status-upsolved {
+        background: #e8f5e9;
+        color: #2e7d32;
+      }
+
+      .problem-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+        font-size: 0.9em;
+        color: #666;
+      }
+
+      .problem-id {
+        color: #999;
+      }
+
+      .problem-rating {
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 4px;
+      }
+
+      .rating-easy {
+        background: #e8f5e9;
+        color: #2e7d32;
+      }
+
+      .rating-medium {
+        background: #e3f2fd;
+        color: #1565c0;
+      }
+
+      .rating-hard {
+        background: #fff3e0;
+        color: #e65100;
+      }
+
+      .rating-veryhard {
+        background: #f3e5f5;
+        color: #6a1b9a;
+      }
+
+      .rating-extreme {
+        background: #ffebee;
+        color: #c62828;
+      }
+
+      .problem-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .tag {
+        display: inline-block;
+        padding: 4px 10px;
+        background: #f0f0f0;
+        color: #666;
+        border-radius: 4px;
+        font-size: 0.85em;
+      }
+
+      .no-results {
+        text-align: center;
+        padding: 40px 20px;
+        color: #999;
+        font-size: 1.1em;
+      }
+
+      @media (max-width: 768px) {
+        .tracker-header h1 {
+          font-size: 1.8em;
+        }
+
+        .input-group {
+          flex-direction: column;
+        }
+
+        .filters-section {
+          flex-direction: column;
+        }
+
+        .problems-list {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
