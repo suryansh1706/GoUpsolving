@@ -1,6 +1,6 @@
 /**
  * Codeforces API Service
- * Handles all API calls to Codeforces with CORS proxy
+ * Routes through Vercel serverless function to avoid CORS issues
  */
 
 import { apiCache } from "./cache";
@@ -12,8 +12,8 @@ import type {
   ProblemInfo,
 } from "../types/codeforces";
 
-const API_BASE = "https://codeforces.com/api";
-const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+// Use Vercel serverless API route instead of direct CORS calls
+const API_BASE = "/api/codeforces";
 
 /**
  * Generic API call with caching
@@ -29,16 +29,17 @@ async function callAPI<T>(
     return apiCache.get(cacheKey);
   }
 
-  const apiUrl = new URL(`${API_BASE}/${endpoint}`);
-  Object.entries(params).forEach(([key, value]) => {
-    apiUrl.searchParams.append(key, String(value));
+  // Build query parameters
+  const queryParams = new URLSearchParams({
+    endpoint,
+    ...Object.entries(params).reduce((acc, [key, value]) => ({
+      ...acc,
+      [key]: String(value),
+    }), {}),
   });
 
-  // Use CORS proxy to bypass browser CORS restrictions
-  const proxyUrl = `${CORS_PROXY}${encodeURIComponent(apiUrl.toString())}`;
-
   try {
-    const response = await fetch(proxyUrl);
+    const response = await fetch(`${API_BASE}?${queryParams.toString()}`);
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
