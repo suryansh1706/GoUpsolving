@@ -1,166 +1,93 @@
 const CODEFORCES_API = 'https://codeforces.com/api';
 
-// Health check for debugging
-if (process.env.VERCEL_ENV === 'production') {
-  console.log('[codeforces-api] Function loaded in production');
-} else {
-  console.log('[codeforces-api] Function loaded in development');
-}
-
 module.exports = async (req, res) => {
-  // Enable CORS for frontend
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Content-Type', 'application/json');
 
+  // Handle OPTIONS
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
+  // Only allow GET
   if (req.method !== 'GET') {
-    res.setHeader('Content-Type', 'application/json');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
+    console.log('[API] Query params:', req.query);
+    
     const { endpoint, ...params } = req.query;
 
-    // Handle endpoint as string or array and validate
+    // Validate endpoint
+    if (!endpoint) {
+      console.error('[API] Missing endpoint');
+      return res.status(400).json({ error: 'Missing endpoint parameter' });
+    }
+
+    // Handle endpoint as array (query params can be arrays)
     const endpointStr = Array.isArray(endpoint) ? endpoint[0] : endpoint;
 
-    if (!endpointStr || typeof endpointStr !== 'string') {
-      res.setHeader('Content-Type', 'application/json');
-      return res.status(400).json({ error: 'Missing or invalid endpoint parameter' });
-    }
-
-    // Validate endpoint format (alphanumeric and dots only)
-    if (!/^[a-zA-Z0-9.]+$/.test(endpointStr)) {
-      res.setHeader('Content-Type', 'application/json');
-      return res.status(400).json({ error: 'Invalid endpoint format' });
-    }
-
-    // Build URL with parameters
-    const url = new URL(`${CODEFORCES_API}/${endpointStr}`);
+    // Build request URL
+    const apiUrl = new URL(`${CODEFORCES_API}/${endpointStr}`);
     
-    // Handle all params (could be string or array)
+    // Add parameters
     Object.entries(params).forEach(([key, value]) => {
-      if (value === undefined || value === null) return;
-      const paramValue = Array.isArray(value) ? value[0] : value;
-      if (paramValue !== undefined && paramValue !== null) {
-        url.searchParams.append(key, String(paramValue));
+      if (value !== undefined && value !== null) {
+        const paramValue = Array.isArray(value) ? value[0] : value;
+        apiUrl.searchParams.append(key, String(paramValue));
       }
     });
 
-    console.log(`[codeforces-api] Proxying: ${endpointStr} with params:`, Object.keys(params));
-    console.log(`[codeforces-api] Full URL: ${url.toString()}`);
+    console.log(`[API] Calling Codeforces: ${apiUrl.toString()}`);
 
-    // Fetch from Codeforces API with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-
-    let response;
-    try {
-      response = await fetch(url.toString(), {
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'GoUpsolving/1.0 (+https://go-upsolving.vercel.app)'
-        }
-      });
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      console.error('[codeforces-api] Fetch failed:', fetchError.message);
-      res.setHeader('Content-Type', 'application/json');
-      return res.status(502).json({ 
-        error: 'Network error',
-        details: fetchError.message
-      });
-    }
-
-    clearTimeout(timeoutId);
-
-    const contentType = response.headers.get('content-type');
-    
-    if (!response.ok) {
-      let errorBody = '';
-      try {
-        errorBody = await response.text();
-      } catch (e) {
-        errorBody = 'Could not read error body';
+    // Make the request
+    const response = await fetch(apiUrl.toString(), {
+      headers: {
+        'User-Agent': 'GoUpsolving/1.0'
       }
-      
-      console.error(`[codeforces-api] Error response (${response.status}): ${errorBody.slice(0, 500)}`);
-      
-      res.setHeader('Content-Type', 'application/json');
-      return res.status(response.status).json({ 
-        error: `Codeforces API error: ${response.status}`,
-        details: errorBody.slice(0, 200)
+    });
+
+    console.log(`[API] Response status: ${response.status}`);
+
+    // Read response text first (safer)
+    const responseText = await response.text();
+    console.log(`[API] Response length: ${responseText.length}`);
+
+    if (!response.ok) {
+      console.error(`[API] Error from Codeforces: ${response.status}`);
+      console.error(`[API] Error body: ${responseText.slice(0, 200)}`);
+      return res.status(response.status).json({
+        error: `Codeforces API returned ${response.status}`,
+        details: responseText.slice(0, 100)
       });
     }
 
-    if (!contentType?.includes('application/json')) {
-      console.error(`[codeforces-api] Invalid content type: ${contentType}`);
-      res.setHeader('Content-Type', 'application/json');
-      return res.status(502).json({ 
-        error: 'Invalid response from Codeforces API',
-        contentType: contentType || 'unknown'
-      });
-    }
-
+    // Try to parse JSON
     let data;
     try {
-      data = await response.json();
-    } catch (parseError) {
-      console.error('[codeforces-api] JSON parse failed:', parseError.message);
-      res.setHeader('Content-Type', 'application/json');
-      return res.status(502).json({ 
-        error: 'Failed to parse Codeforces API response',
-        details: parseError.message
-      });
-    }
-    
-    // Validate Codeforces response format
-    if (!data || typeof data !== 'object') {
-      console.error('[codeforces-api] Invalid JSON response format');
-      res.setHeader('Content-Type', 'application/json');
-      return res.status(502).json({ 
-        error: 'Invalid response format from Codeforces API'
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('[API] JSON parse error:', e.message);
+      return res.status(502).json({
+        error: 'Invalid JSON from Codeforces API',
+        details: e.message
       });
     }
 
-    console.log(`[codeforces-api] ✓ Success: ${endpointStr}`);
-
-    // Set cache headers for GET requests (5 minutes)
+    console.log(`[API] ✓ Success for endpoint: ${endpointStr}`);
     res.setHeader('Cache-Control', 'public, max-age=300');
-    res.setHeader('Content-Type', 'application/json');
-    
     return res.status(200).json(data);
+
   } catch (error) {
-    console.error('[codeforces-api] Unhandled exception:', error);
-    
-    let errorMessage = 'Unknown error';
-    let statusCode = 500;
-    
-    if (error instanceof TypeError) {
-      if (error.message.includes('fetch')) {
-        errorMessage = 'Network error connecting to Codeforces';
-        statusCode = 502;
-      } else if (error.message.includes('JSON')) {
-        errorMessage = 'Failed to parse API response';
-        statusCode = 502;
-      }
-    } else if (error instanceof Error) {
-      if (error.message.includes('AbortError')) {
-        errorMessage = 'Request timeout';
-        statusCode = 504;
-      }
-    }
-    
-    res.setHeader('Content-Type', 'application/json');
-    return res.status(statusCode).json({ 
-      error: errorMessage,
-      details: error && error.message ? error.message : 'Unknown error'
+    console.error('[API] Exception:', error);
+    console.error('[API] Stack:', error.stack);
+    return res.status(500).json({
+      error: error.message || 'Internal server error',
+      type: error.constructor.name
     });
   }
 };
