@@ -173,8 +173,8 @@ export async function getUpsolveProblems(
 
     // ===== STEP 4: Collect upsolve candidates from each contest =====
     const upsolveCandidates: UpsolveProblem[] = [];
-
-    for (const contest of participatedRecentContests) {
+Recent
+    for (const contest of participatedContests) {
       const contestProblems = await collectContestProblems(
         contest,
         allSubmissions,

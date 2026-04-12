@@ -23,7 +23,7 @@ export function CodeforcesUpsolveTracker() {
   const [handle, setHandle] = useState("");
   const [submittedHandle, setSubmittedHandle] = useState("");
   const [filters, setFilters] = useState<ProblemFilters>({
-    status: "attempted",
+    status: "all",
     minRating: 0,
     maxRating: 3500,
     tags: [],
