@@ -7,7 +7,7 @@ if (process.env.VERCEL_ENV === 'production') {
   console.log('[codeforces-api] Function loaded in development');
 }
 
-export default async (req, res) => {
+module.exports = async (req, res) => {
   // Enable CORS for frontend
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
