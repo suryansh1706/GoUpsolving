@@ -42,6 +42,7 @@ function isEligibleForUpsolving(
 
   // Skip if already solved during contest
   if (contestSolved.has(problemId)) {
+    console.log(`  ❌ ${problemId}: Already solved during contest`);
     return false;
   }
 
@@ -49,12 +50,14 @@ function isEligibleForUpsolving(
   if (maxIndexToShow) {
     const cmp = compareProblemIndices(problem.index, maxIndexToShow);
     if (cmp > 0) {
+      console.log(`  ❌ ${problemId}: Index ${problem.index} > ${maxIndexToShow}`);
       return false;
     }
   }
 
   // Skip if problem rating is too high (rated problems only)
   if (problem.rating !== undefined && problem.rating > maxRating + 200) {
+    console.log(`  ❌ ${problemId}: Rating ${problem.rating} > ${maxRating + 200}`);
     return false;
   }
 
@@ -77,6 +80,7 @@ async function collectContestProblems(
 
   try {
     const { problems } = await codeforcesAPI.getContestStandings(contest.id);
+    console.log(`  📋 Contest ${contest.id}: ${problems.length} problems`);
 
     // Determine which problems user solved during the contest
     const contestSolved = getContestSolvedProblems(
@@ -85,6 +89,7 @@ async function collectContestProblems(
       contest.startTimeSeconds,
       contest.durationSeconds
     );
+    console.log(`    ✓ Solved during contest: ${contestSolved.size}`);
 
     // Find the highest problem index user reached
     const highestReached = getHighestProblemIndexReached(
@@ -93,9 +98,11 @@ async function collectContestProblems(
       contest.startTimeSeconds,
       contest.durationSeconds
     );
+    console.log(`    ✓ Highest reached: ${highestReached}`);
 
     // Calculate the maximum index user should attempt (highest + 1)
     const maxIndexToShow = highestReached ? getNextProblemIndex(highestReached) : null;
+    console.log(`    ✓ Max index to show: ${maxIndexToShow}`);
 
     // Evaluate each problem in the contest
     problems.forEach((problem) => {
@@ -126,11 +133,13 @@ async function collectContestProblems(
         tags: problem.tags,
         status,
       });
+      console.log(`    ✅ Added: ${problemId} (${status})`);
     });
   } catch (error) {
     console.warn(`Failed to fetch standings for contest ${contest.id}:`, error);
   }
 
+  console.log(`  📊 Contest ${contest.id} total candidates: ${candidates.length}\n`);
   return candidates;
 }
 
