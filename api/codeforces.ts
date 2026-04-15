@@ -123,7 +123,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
         statusCode = 502;
       }
     } else if (error instanceof Error) {
-      if (error.message.includes('AbortError')) {
+      if (error.name === 'AbortError') {
         errorMessage = 'Request timeout';
         statusCode = 504;
       }
