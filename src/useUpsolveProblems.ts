@@ -6,6 +6,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { getUpsolveProblems, clearCache } from "./codesforces-upsolve-service";
+import { AppError, categorizeError } from "./types/errors";
 import type { UpsolveProblem } from "./codesforces-upsolve-service";
 
 interface UseUpsolveProblemsState {
@@ -71,7 +72,7 @@ export function useUpsolveProblems(
         error: null,
       });
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = err instanceof AppError ? err : categorizeError(err);
       setState({
         data: null,
         loading: false,

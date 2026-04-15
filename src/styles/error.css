@@ -1,0 +1,154 @@
+/**
+ * Error Display Styling
+ */
+
+/* Base error message styles */
+.error-message {
+  padding: 16px;
+  margin: 16px 0;
+  border-radius: 8px;
+  font-family: system-ui, -apple-system, sans-serif;
+  border-left: 4px solid;
+}
+
+/* Error header with icon and title */
+.error-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.error-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.error-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Main error message */
+.error-main-message {
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Technical details (collapsible) */
+.error-details {
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+.error-details summary {
+  font-size: 12px;
+  color: #666;
+  text-decoration: underline;
+  padding: 4px;
+}
+
+.error-detail-text {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  overflow-x: auto;
+  margin-top: 8px;
+}
+
+/* Suggestion text */
+.error-suggestion {
+  margin-top: 8px;
+  font-size: 13px;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+/* Codeforces API Error */
+.error-codeforces {
+  background-color: #fff3cd;
+  border-color: #ffc107;
+  color: #856404;
+}
+
+.error-codeforces .error-title {
+  color: #856404;
+}
+
+/* Codeforces Critical Error (Rate Limit, etc.) */
+.error-codeforces-critical {
+  background-color: #f8d7da;
+  border-color: #dc3545;
+  color: #721c24;
+}
+
+.error-codeforces-critical .error-title {
+  color: #721c24;
+}
+
+.error-codeforces-critical .error-main-message {
+  font-weight: 500;
+}
+
+/* Network Error */
+.error-network {
+  background-color: #f8d7da;
+  border-color: #dc3545;
+  color: #721c24;
+}
+
+.error-network .error-title {
+  color: #721c24;
+}
+
+/* Application Error */
+.error-app {
+  background-color: #e2e3e5;
+  border-color: #6c757d;
+  color: #383d41;
+}
+
+.error-app .error-title {
+  color: #383d41;
+}
+
+/* Cache Error */
+.error-cache {
+  background-color: #d1ecf1;
+  border-color: #17a2b8;
+  color: #0c5460;
+}
+
+.error-cache .error-title {
+  color: #0c5460;
+}
+
+/* Generic Error */
+.error-generic {
+  background-color: #e2e3e5;
+  border-color: #6c757d;
+  color: #383d41;
+}
+
+.error-generic .error-title {
+  color: #383d41;
+}
+
+/* Responsive styles */
+@media (max-width: 640px) {
+  .error-message {
+    padding: 12px;
+    margin: 12px 0;
+  }
+
+  .error-title {
+    font-size: 14px;
+  }
+
+  .error-main-message {
+    font-size: 13px;
+  }
+}
