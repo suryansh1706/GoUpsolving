@@ -28,8 +28,8 @@ function getErrorContent(error: Error) {
 function getErrorContentByType(type: ErrorType, message: string) {
   const errorConfigs: Record<ErrorType, ReturnType<typeof createErrorConfig>> = {
     [ErrorType.CODEFORCES_API]: createErrorConfig(
-      "🔗 Codeforces API Error",
-      "Codeforces API returned an error. This might be a temporary issue on their side.",
+      "🔗 Codeforces Server Issue",
+      "Codeforces API is experiencing problems on their end. This is NOT an issue with our application.",
       message,
       "error-codeforces"
     ),
@@ -50,7 +50,7 @@ function getErrorContentByType(type: ErrorType, message: string) {
 
     [ErrorType.CODEFORCES_TIMEOUT]: createErrorConfig(
       "⏳ Request Timeout",
-      "The request to Codeforces took too long. Please try again.",
+      "The request to Codeforces took too long. Their servers may be slow. Try again in a moment.",
       message,
       "error-codeforces"
     ),
@@ -103,11 +103,12 @@ function getIconForTitle(title: string): string {
 }
 
 function getSuggestionForError(title: string): string {
+  if (title.includes("Server Issue")) return "Wait a few minutes and try again. Check if codeforces.com is working.";
   if (title.includes("User")) return "Try again with a different username.";
   if (title.includes("Rate")) return "Wait a minute and try again.";
-  if (title.includes("Timeout")) return "Try again in a moment.";
+  if (title.includes("Timeout")) return "Wait a moment and try again. Codeforces may be experiencing high load.";
   if (title.includes("Network")) return "Check your internet connection and try again.";
-  if (title.includes("Codeforces")) return "This might be a temporary issue. Please try again later.";
+  if (title.includes("Codeforces")) return "This is a Codeforces issue, not our app. Try again later.";
   return "Please try again or contact support.";
 }
 

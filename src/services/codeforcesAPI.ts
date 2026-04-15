@@ -104,10 +104,10 @@ function getStatusMessage(status: number): string {
     403: "Forbidden",
     404: "Not Found",
     429: "Too Many Requests - Rate Limited",
-    500: "Server Error",
-    502: "Bad Gateway",
-    503: "Service Unavailable",
-    504: "Gateway Timeout",
+    500: "Codeforces Server Error (500) - Their servers are having issues",
+    502: "Bad Gateway - Codeforces servers unreachable",
+    503: "Service Unavailable - Codeforces is temporarily down",
+    504: "Gateway Timeout - Codeforces servers not responding",
   };
   return messages[status] || "Unknown Error";
 }
