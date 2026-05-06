@@ -54,7 +54,7 @@ function filterProblems(
  */
 function sortProblems(
   problems: UpsolveProblem[],
-  sortBy: "rating" | "name" | "status"
+  sortBy: "rating" | "status"
 ): UpsolveProblem[] {
   const sorted = [...problems];
 
@@ -62,11 +62,7 @@ function sortProblems(
     case "rating":
       sorted.sort((a, b) => (a.rating || 0) - (b.rating || 0));
       break;
-
-    case "name":
-      sorted.sort((a, b) => a.name.localeCompare(b.name));
-      break;
-
+    
     case "status":
       const statusOrder: Record<string, number> = {
         not_attempted: 0,
@@ -96,7 +92,7 @@ export function CodeforcesUpsolveTracker() {
     maxRating: 3500,
     tags: [],
   });
-  const [sortBy, setSortBy] = useState<"rating" | "name" | "status">("rating");
+  const [sortBy, setSortBy] = useState<"rating" | "status">("rating");
 
   // ===== DATA FETCHING =====
   const { data, loading, error, refetch, stats } = useUpsolveProblems(
