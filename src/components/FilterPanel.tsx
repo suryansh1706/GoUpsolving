@@ -4,7 +4,7 @@
  * Provides UI controls for filtering and sorting problems:
  * - Filter by status (All, Not Attempted, Attempted, Upsolved)
  * - Filter by rating range
- * - Sort by rating, name, or status
+ * - Sort by rating or status
  * - Filter by tags
  */
 
@@ -14,8 +14,8 @@ import type { ProblemFilters } from "../types/codeforces";
 interface FilterPanelProps {
   filters: ProblemFilters;
   onFiltersChange: (filters: ProblemFilters) => void;
-  sortBy: "rating" | "name" | "status";
-  onSortChange: (sort: "rating" | "name" | "status") => void;
+  sortBy: "rating" | "status";
+  onSortChange: (sort: "rating" | "status") => void;
   availableTags: string[];
 }
 
@@ -90,7 +90,6 @@ export function FilterPanel({
       <label>Sort By:</label>
       <select value={sortBy} onChange={(e) => onSortChange(e.target.value as any)}>
         <option value="rating">Rating (Low to High)</option>
-        <option value="name">Problem Name</option>
         <option value="status">Status</option>
       </select>
     </div>
