@@ -7,7 +7,6 @@ const REQUEST_TIMEOUT = 15000; // 15 seconds
  * CORS Headers - Allow frontend to call this API
  */
 function setCorsHeaders(res: VercelResponse): void {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
