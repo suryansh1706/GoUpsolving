@@ -217,13 +217,14 @@ export function compareProblemIndices(a: string, b: string): number {
 // ===== FILTERING FUNCTIONS =====
 
 /**
- * Filters contests to only those from the last 6 months
+ * Filters contests to only those from the last 6 months (or custom days)
  * @param contests - All contests
- * @returns Contests from the last 6 months
+ * @param daysBack - Number of days to look back (default: 180 days = 6 months)
+ * @returns Contests from the specified time period
  */
-export function filterContestsLast6Months(contests: any[]): any[] {
-  const sixMonthsAgo = Math.floor(Date.now() / 1000) - 6 * 30 * 24 * 60 * 60;
-  return contests.filter((contest) => contest.startTimeSeconds > sixMonthsAgo);
+export function filterContestsLast6Months(contests: any[], daysBack: number = 180): any[] {
+  const timeAgoSeconds = Math.floor(Date.now() / 1000) - daysBack * 24 * 60 * 60;
+  return contests.filter((contest) => contest.startTimeSeconds > timeAgoSeconds);
 }
 
 /**

@@ -13,6 +13,7 @@
 import { codeforcesAPI } from "./codeforcesAPI";
 import { apiCache } from "./cache";
 import type { UpsolveProblem, Contest, Submission, ProblemInfo } from "../types/codeforces";
+import { AppError } from "../types/errors";
 import {
   getMaxRating,
   getContestSolvedProblems,
@@ -136,7 +137,15 @@ async function collectContestProblems(
       console.log(`    ✅ Added: ${problemId} (${status})`);
     });
   } catch (error) {
-    console.warn(`Failed to fetch standings for contest ${contest.id}:`, error);
+    // Gracefully skip contests that require authentication (private/gym contests)
+    // These are expected and not errors - just skip them silently
+    if (error instanceof AppError && error.message.includes("authenticated")) {
+      console.log(`  ⏭️  Skipping contest ${contest.id} (requires authentication)`);
+      return candidates;
+    }
+    
+    // Log other errors
+    console.warn(`⚠️  Failed to fetch standings for contest ${contest.id}:`, error);
   }
 
   console.log(`  📊 Contest ${contest.id} total candidates: ${candidates.length}\n`);
@@ -171,25 +180,62 @@ export async function getUpsolveProblems(
 
     // ===== STEP 3: Filter recent contests =====
     const allContests = await codeforcesAPI.getContestList();
-    const recentContests = filterContestsLast6Months(allContests);
+    // Try 6 months first, if no results try 12 months
+    let recentContests = filterContestsLast6Months(allContests, 180);
+    let timeWindowDays = 180;
+    
     console.log(`📅 Total contests in 6 months: ${recentContests.length}`);
+    
+    // Debug: show date range
+    if (recentContests.length > 0) {
+      const earliestContest = new Date(recentContests[recentContests.length - 1].startTimeSeconds * 1000);
+      const latestContest = new Date(recentContests[0].startTimeSeconds * 1000);
+      console.log(`   Date range: ${earliestContest.toLocaleDateString()} to ${latestContest.toLocaleDateString()}`);
+    }
 
     // Only keep recent contests that user participated in
-    const participatedRecentContests = recentContests.filter((contest) =>
+    let participatedRecentContests = recentContests.filter((contest) =>
       participatedContestIds.has(contest.id)
     );
     console.log(`🎯 Recent contests participated in: ${participatedRecentContests.length}`);
+    
+    // Debug: if no recent contests, check if user has older contests
+    if (participatedRecentContests.length === 0 && participatedContestIds.size > 0) {
+      console.log(`⚠️  No contests in last 6 months. Trying 12 months...`);
+      recentContests = filterContestsLast6Months(allContests, 365);
+      participatedRecentContests = recentContests.filter((contest) =>
+        participatedContestIds.has(contest.id)
+      );
+      timeWindowDays = 365;
+      console.log(`   Found ${participatedRecentContests.length} contests in last 12 months`);
+    }
 
     // ===== STEP 4: Collect upsolve candidates from each contest =====
     const upsolveCandidates: UpsolveProblem[] = [];
+    
+    // Limit to first 20 contests to avoid overwhelming the API/function
+    const maxContestsToProcess = Math.min(participatedRecentContests.length, 20);
+    console.log(`🔄 Processing ${maxContestsToProcess} contests (max limit to prevent timeout)...`);
 
-    for (const contest of participatedRecentContests) {
-      const contestProblems = await collectContestProblems(
-        contest,
-        allSubmissions,
-        maxRating
-      );
-      upsolveCandidates.push(...contestProblems);
+    for (let i = 0; i < maxContestsToProcess; i++) {
+      const contest = participatedRecentContests[i];
+      try {
+        const contestProblems = await collectContestProblems(
+          contest,
+          allSubmissions,
+          maxRating
+        );
+        upsolveCandidates.push(...contestProblems);
+        
+        // Add small delay between requests to prevent overwhelming the API
+        if (i < maxContestsToProcess - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      } catch (error) {
+        // Log but continue - don't let one contest failure stop the whole process
+        console.warn(`⚠️  Skipping contest ${contest.id}: ${error}`);
+        continue;
+      }
     }
 
     // ===== STEP 5: Deduplicate and sort =====

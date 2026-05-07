@@ -73,94 +73,114 @@ function isValidJsonResponse(contentType: string | null): boolean {
  * Main API Handler
  */
 export default async (req: VercelRequest, res: VercelResponse) => {
-  setCorsHeaders(res);
-
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  // Only allow GET requests
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
+  // Set a timeout to prevent function from hanging
+  const timeoutId = setTimeout(() => {
+    console.error('❌ Request timeout - returning 504');
+    if (!res.headersSent) {
+      res.status(504).json({ error: 'Request timeout' });
+    }
+  }, 25000); // 25 second timeout (Vercel has 30 second limit)
+  
   try {
-    // Step 1: Extract and validate endpoint
-    const { endpoint, ...params } = req.query as Record<string, any>;
-    const validatedEndpoint = getValidatedEndpoint(endpoint);
+    setCorsHeaders(res);
 
-    if (!validatedEndpoint) {
-      return res.status(400).json({ error: 'Missing or invalid endpoint parameter' });
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+      clearTimeout(timeoutId);
+      return res.status(200).end();
     }
 
-    // Step 2: Build URL
-    const codeforcesUrl = buildCodeforcesUrl(validatedEndpoint, params);
-    console.log(`📤 Calling Codeforces: ${validatedEndpoint}`);
-    console.log(`📝 URL: ${codeforcesUrl.toString()}`);
-    console.log(`📝 Params: ${JSON.stringify(params)}`);
-
-    // Step 3: Fetch from Codeforces
-    const response = await fetchFromCodeforces(codeforcesUrl);
-    
-    // Log response details for debugging
-    const contentType = response.headers.get('content-type');
-    console.log(`📨 Response status: ${response.status}, Content-Type: ${contentType}`);
-
-    // Step 4: Check for HTTP errors
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => 'No body');
-      console.error(`❌ Codeforces returned ${response.status}: ${errorBody.slice(0, 200)}`);
-      
-      return res.status(response.status).json({
-        error: `Codeforces API error: ${response.status}`,
-        details: errorBody.slice(0, 500),
-      });
+    // Only allow GET requests
+    if (req.method !== 'GET') {
+      clearTimeout(timeoutId);
+      return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    // Step 5: Verify JSON response
-    if (!isValidJsonResponse(contentType)) {
-      const bodyPreview = await response.text().catch(() => 'Unable to read');
-      console.error(`❌ Invalid response type: ${contentType}`);
-      console.error(`📝 Body preview: ${bodyPreview.slice(0, 500)}`);
-      return res.status(502).json({
-        error: 'Invalid response from Codeforces API',
-        contentType,
-        bodyPreview: bodyPreview.slice(0, 500),
-      });
-    }
-
-    // Step 6: Parse and return data
-    let data: any;
-    let responseText = '';
     try {
-      responseText = await response.text();
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error(`❌ JSON parse error: ${parseError}`);
-      console.error(`📝 Response text was: ${responseText.slice(0, 500) || 'not captured'}`);
-      return res.status(502).json({
-        error: 'Failed to parse JSON response from Codeforces',
-        parseError: String(parseError),
-        bodyPreview: responseText.slice(0, 500) || 'unable to capture',
-      });
-    }
-    
-    if (!data || typeof data !== 'object') {
-      console.error('❌ Invalid JSON structure');
-      return res.status(502).json({
-        error: 'Invalid response format from Codeforces API',
-      });
-    }
+      // Step 1: Extract and validate endpoint
+      const { endpoint, ...params } = req.query as Record<string, any>;
+      const validatedEndpoint = getValidatedEndpoint(endpoint);
 
-    // Step 7: Cache successful response
-    res.setHeader('Cache-Control', 'public, max-age=300');
-    console.log(`✅ Success: ${validatedEndpoint}`);
-    
-    return res.status(200).json(data);
+      if (!validatedEndpoint) {
+        clearTimeout(timeoutId);
+        return res.status(400).json({ error: 'Missing or invalid endpoint parameter' });
+      }
 
+      // Step 2: Build URL
+      const codeforcesUrl = buildCodeforcesUrl(validatedEndpoint, params);
+      console.log(`📤 Calling Codeforces: ${validatedEndpoint}`);
+      console.log(`📝 URL: ${codeforcesUrl.toString()}`);
+      console.log(`📝 Params: ${JSON.stringify(params)}`);
+
+      // Step 3: Fetch from Codeforces
+      const response = await fetchFromCodeforces(codeforcesUrl);
+      
+      // Log response details for debugging
+      const contentType = response.headers.get('content-type');
+      console.log(`📨 Response status: ${response.status}, Content-Type: ${contentType}`);
+
+      // Step 4: Check for HTTP errors
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => 'No body');
+        console.error(`❌ Codeforces returned ${response.status}: ${errorBody.slice(0, 200)}`);
+        
+        clearTimeout(timeoutId);
+        return res.status(response.status).json({
+          error: `Codeforces API error: ${response.status}`,
+          details: errorBody.slice(0, 500),
+        });
+      }
+
+      // Step 5: Verify JSON response
+      if (!isValidJsonResponse(contentType)) {
+        const bodyPreview = await response.text().catch(() => 'Unable to read');
+        console.error(`❌ Invalid response type: ${contentType}`);
+        console.error(`📝 Body preview: ${bodyPreview.slice(0, 500)}`);
+        clearTimeout(timeoutId);
+        return res.status(502).json({
+          error: 'Invalid response from Codeforces API',
+          contentType,
+          bodyPreview: bodyPreview.slice(0, 500),
+        });
+      }
+
+      // Step 6: Parse and return data
+      let data: any;
+      let responseText = '';
+      try {
+        responseText = await response.text();
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error(`❌ JSON parse error: ${parseError}`);
+        console.error(`📝 Response text was: ${responseText.slice(0, 500) || 'not captured'}`);
+        clearTimeout(timeoutId);
+        return res.status(502).json({
+          error: 'Failed to parse JSON response from Codeforces',
+          parseError: String(parseError),
+          bodyPreview: responseText.slice(0, 500) || 'unable to capture',
+        });
+      }
+      
+      if (!data || typeof data !== 'object') {
+        console.error('❌ Invalid JSON structure');
+        clearTimeout(timeoutId);
+        return res.status(502).json({
+          error: 'Invalid response format from Codeforces API',
+        });
+      }
+
+      // Step 7: Cache successful response
+      res.setHeader('Cache-Control', 'public, max-age=300');
+      console.log(`✅ Success: ${validatedEndpoint}`);
+      
+      clearTimeout(timeoutId);
+      return res.status(200).json(data);
+    } finally {
+      clearTimeout(timeoutId);
+    }
   } catch (error) {
     console.error('❌ Handler error:', error);
+    clearTimeout(timeoutId);
     
     // Determine error type and appropriate status code
     let errorMessage = 'Unknown error';
@@ -179,9 +199,11 @@ export default async (req: VercelRequest, res: VercelResponse) => {
       statusCode = 504;
     }
     
-    return res.status(statusCode).json({
-      error: errorMessage,
-      details: error instanceof Error ? error.message : String(error),
-    });
+    if (!res.headersSent) {
+      return res.status(statusCode).json({
+        error: errorMessage,
+        details: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 };
