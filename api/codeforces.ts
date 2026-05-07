@@ -108,16 +108,12 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
       // Step 2: Build URL
       const codeforcesUrl = buildCodeforcesUrl(validatedEndpoint, params);
-      console.log(`📤 Calling Codeforces: ${validatedEndpoint}`);
-      console.log(`📝 URL: ${codeforcesUrl.toString()}`);
-      console.log(`📝 Params: ${JSON.stringify(params)}`);
 
       // Step 3: Fetch from Codeforces
       const response = await fetchFromCodeforces(codeforcesUrl);
       
-      // Log response details for debugging
+      // Check content type
       const contentType = response.headers.get('content-type');
-      console.log(`📨 Response status: ${response.status}, Content-Type: ${contentType}`);
 
       // Step 4: Check for HTTP errors
       if (!response.ok) {
@@ -180,8 +176,6 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
       // Step 7: Cache successful response
       res.setHeader('Cache-Control', 'public, max-age=300');
-      console.log(`✅ Success: ${validatedEndpoint}`);
-      
       clearTimeout(timeoutId);
       return res.status(200).json(data);
     } finally {

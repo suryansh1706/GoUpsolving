@@ -66,7 +66,6 @@ async function callAPI<T>(
   const cacheKey = `${endpoint}:${JSON.stringify(params)}`;
   
   if (apiCache.has(cacheKey)) {
-    console.log(`📦 Cache hit: ${endpoint}`);
     return apiCache.get(cacheKey);
   }
 
@@ -78,8 +77,6 @@ async function callAPI<T>(
       [key]: String(value),
     }), {}),
   });
-
-  console.log(`🌐 Calling: ${endpoint}`);
 
   try {
     // --- STEP 3: Make Request ---
@@ -136,7 +133,6 @@ async function callAPI<T>(
 
     // --- STEP 7: Cache and Return ---
     apiCache.set(cacheKey, json.result);
-    console.log(`✅ Success: ${endpoint}`);
     return json.result;
 
   } catch (error) {
