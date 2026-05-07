@@ -8,7 +8,6 @@
  * - Filter by tags
  */
 
-import React from "react";
 import type { ProblemFilters } from "../types/codeforces";
 
 interface FilterPanelProps {
