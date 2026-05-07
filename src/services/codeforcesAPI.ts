@@ -96,7 +96,22 @@ async function callAPI<T>(
     }
 
     // --- STEP 5: Parse Response ---
-    const json = await response.json();
+    let json: any;
+    try {
+      json = await response.json();
+    } catch (parseError) {
+      // Response is not valid JSON - get the actual response text for debugging
+      const responseText = await response.text();
+      console.error(`❌ JSON Parse Error for endpoint "${endpoint}"`);
+      console.error(`Response preview: ${responseText.slice(0, 500)}`);
+      console.error(`Full error: ${parseError}`);
+      
+      throw new AppError(
+        ErrorType.CODEFORCES_API,
+        `Invalid response from Codeforces API. Expected JSON but received: ${responseText.slice(0, 100)}`,
+        `JSON Parse Error: ${parseError}`
+      );
+    }
 
     // --- STEP 6: Check Codeforces Response Status ---
     if (json.status !== "OK") {
@@ -190,10 +205,6 @@ export const codeforcesAPI = {
 
     return {
       contest: response.contest,
-      problems: response.problems,
-    };
-  },
-};
       problems: response.problems,
     };
   },
