@@ -132,17 +132,17 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
     // Step 6: Parse and return data
     let data: any;
-    let responseText: string;
+    let responseText = '';
     try {
       responseText = await response.text();
       data = JSON.parse(responseText);
     } catch (parseError) {
       console.error(`❌ JSON parse error: ${parseError}`);
-      console.error(`📝 Response text was: ${responseText?.slice(0, 500) || 'not captured'}`);
+      console.error(`📝 Response text was: ${responseText.slice(0, 500) || 'not captured'}`);
       return res.status(502).json({
         error: 'Failed to parse JSON response from Codeforces',
         parseError: String(parseError),
-        bodyPreview: responseText?.slice(0, 500) || 'unable to capture',
+        bodyPreview: responseText.slice(0, 500) || 'unable to capture',
       });
     }
     
