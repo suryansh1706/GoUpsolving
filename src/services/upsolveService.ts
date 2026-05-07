@@ -182,7 +182,6 @@ export async function getUpsolveProblems(
     const allContests = await codeforcesAPI.getContestList();
     // Try 6 months first, if no results try 12 months
     let recentContests = filterContestsLast6Months(allContests, 180);
-    let timeWindowDays = 180;
     
     console.log(`📅 Total contests in 6 months: ${recentContests.length}`);
     
@@ -206,7 +205,6 @@ export async function getUpsolveProblems(
       participatedRecentContests = recentContests.filter((contest) =>
         participatedContestIds.has(contest.id)
       );
-      timeWindowDays = 365;
       console.log(`   Found ${participatedRecentContests.length} contests in last 12 months`);
     }
 

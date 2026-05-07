@@ -131,33 +131,42 @@ export default async (req: VercelRequest, res: VercelResponse) => {
         });
       }
 
-      // Step 5: Verify JSON response
+      // Step 5: Get response body (only once - response body can only be read once)
+      let responseText = '';
+      try {
+        responseText = await response.text();
+      } catch (readError) {
+        console.error(`❌ Failed to read response: ${readError}`);
+        clearTimeout(timeoutId);
+        return res.status(502).json({
+          error: 'Failed to read response from Codeforces',
+        });
+      }
+
+      // Step 6: Verify JSON response
       if (!isValidJsonResponse(contentType)) {
-        const bodyPreview = await response.text().catch(() => 'Unable to read');
         console.error(`❌ Invalid response type: ${contentType}`);
-        console.error(`📝 Body preview: ${bodyPreview.slice(0, 500)}`);
+        console.error(`📝 Body preview: ${responseText.slice(0, 500)}`);
         clearTimeout(timeoutId);
         return res.status(502).json({
           error: 'Invalid response from Codeforces API',
           contentType,
-          bodyPreview: bodyPreview.slice(0, 500),
+          bodyPreview: responseText.slice(0, 500),
         });
       }
 
-      // Step 6: Parse and return data
+      // Step 7: Parse and return data
       let data: any;
-      let responseText = '';
       try {
-        responseText = await response.text();
         data = JSON.parse(responseText);
       } catch (parseError) {
         console.error(`❌ JSON parse error: ${parseError}`);
-        console.error(`📝 Response text was: ${responseText.slice(0, 500) || 'not captured'}`);
+        console.error(`📝 Response text was: ${responseText.slice(0, 500)}`);
         clearTimeout(timeoutId);
         return res.status(502).json({
           error: 'Failed to parse JSON response from Codeforces',
           parseError: String(parseError),
-          bodyPreview: responseText.slice(0, 500) || 'unable to capture',
+          bodyPreview: responseText.slice(0, 500),
         });
       }
       

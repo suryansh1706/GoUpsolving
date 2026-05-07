@@ -3,7 +3,11 @@
  */
 
 export interface UserRatingChange {
+  contestId: number;
+  contestName: string;
   newRating: number;
+  oldRating: number;
+  ratingUpdateTimeSeconds: number;
 }
 
 export interface Submission {
