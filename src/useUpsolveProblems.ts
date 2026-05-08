@@ -25,31 +25,7 @@ interface UseUpsolveProblemsResult extends UseUpsolveProblemsState {
   };
 }
 
-/**
- * Custom React hook to fetch and manage upsolve problems
- * 
- * @example
- * const { data, loading, error, refetch, stats } = useUpsolveProblems("tourist");
- * 
- * if (loading) return <div>Loading...</div>;
- * if (error) return <div>Error: {error.message}</div>;
- * 
- * return (
- *   <div>
- *     <p>Found {stats.total} problems ({stats.attempted} attempted, {stats.upsolved} upsolved)</p>
- *     {data?.map(problem => (
- *       <div key={`${problem.contestId}-${problem.index}`}>
- *         <h3>{problem.name}</h3>
- *         <p>Rating: {problem.rating}</p>
- *         <p>Status: {problem.status}</p>
- *       </div>
- *     ))}
- *   </div>
- * );
- */
-export function useUpsolveProblems(
-  initialHandle?: string
-): UseUpsolveProblemsResult {
+export function useUpsolveProblems(initialHandle?: string): UseUpsolveProblemsResult {
   const [state, setState] = useState<UseUpsolveProblemsState>({
     data: null,
     loading: !!initialHandle,
@@ -102,64 +78,3 @@ export function useUpsolveProblems(
     stats,
   };
 }
-
-// ============================================================================
-// Example Component Usage
-// ============================================================================
-
-/*
-import React, { useState } from "react";
-import { useUpsolveProblems } from "./useUpsolveProblems";
-
-export function CodeforcesUpsolveViewer() {
-  const [handle, setHandle] = useState("");
-  const { data, loading, error, refetch, stats } = useUpsolveProblems();
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await refetch(handle);
-  };
-
-  return (
-    <div className="container">
-      <form onSubmit={handleSearch}>
-        <input
-          type="text"
-          value={handle}
-          onChange={(e) => setHandle(e.target.value)}
-          placeholder="Enter Codeforces handle..."
-        />
-        <button type="submit" disabled={loading}>
-          {loading ? "Loading..." : "Search"}
-        </button>
-      </form>
-
-      {error && <div className="error">Error: {error.message}</div>}
-
-      {data && (
-        <div>
-          <div className="stats">
-            <p>Total Problems: {stats.total}</p>
-            <p>Attempted: {stats.attempted}</p>
-            <p>Upsolved: {stats.upsolved}</p>
-          </div>
-
-          <div className="problems-list">
-            {data.map((problem) => (
-              <div key={`${problem.contestId}-${problem.index}`} className="problem-card">
-                <h3>{problem.name}</h3>
-                <p>Problem: {problem.index}</p>
-                <p>Rating: {problem.rating || "N/A"}</p>
-                <p>Tags: {problem.tags.join(", ")}</p>
-                <span className={`status status-${problem.status}`}>
-                  {problem.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-*/

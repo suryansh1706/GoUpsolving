@@ -1,6 +1,6 @@
 /**
  * Codeforces Upsolve Recommendation Service
- * 
+ *
  * This module provides functionality to fetch and analyze problems that a user
  * should upsolve based on their Codeforces rating history and contest performance.
  */
@@ -88,9 +88,9 @@ interface ContestStanding {
 }
 
 interface UpsolveStatus {
-  "not_attempted": boolean;
-  "attempted": boolean;
-  "upsolved": boolean;
+  not_attempted: boolean;
+  attempted: boolean;
+  upsolved: boolean;
 }
 
 export interface UpsolveProblem {
@@ -148,10 +148,10 @@ const apiCache = new APICache();
  */
 async function codeforcesAPI<T>(
   endpoint: string,
-  params: Record<string, any> = {}
+  params: Record<string, any> = {},
 ): Promise<T> {
   const cacheKey = `${endpoint}:${JSON.stringify(params)}`;
-  
+
   // Check cache first
   if (apiCache.has(cacheKey)) {
     return apiCache.get(cacheKey);
@@ -159,14 +159,14 @@ async function codeforcesAPI<T>(
 
   const baseURL = "https://codeforces.com/api";
   const url = new URL(`${baseURL}/${endpoint}`);
-  
+
   Object.entries(params).forEach(([key, value]) => {
     url.searchParams.append(key, String(value));
   });
 
   try {
     const response = await fetch(url.toString());
-    
+
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
     }
@@ -188,7 +188,9 @@ async function codeforcesAPI<T>(
 /**
  * Fetch user's rating history
  */
-async function getUserRatingHistory(handle: string): Promise<UserRatingChange[]> {
+async function getUserRatingHistory(
+  handle: string,
+): Promise<UserRatingChange[]> {
   return codeforcesAPI<UserRatingChange[]>("user.rating", { handle });
 }
 
@@ -210,7 +212,7 @@ async function getContestList(): Promise<Contest[]> {
  * Fetch contest standings with all problems
  */
 async function getContestStandings(
-  contestId: number
+  contestId: number,
 ): Promise<{ contest: Contest; problems: ProblemInfo[] }> {
   const response = await codeforcesAPI<ContestStanding>("contest.standings", {
     contestId,
@@ -249,7 +251,7 @@ function isAccepted(submission: Submission): boolean {
 function isDuringContest(
   submission: Submission,
   contestStartTime: number,
-  contestDuration: number
+  contestDuration: number,
 ): boolean {
   const submissionTime = submission.creationTimeSeconds;
   const contestEndTime = contestStartTime + contestDuration;
@@ -263,7 +265,7 @@ function getContestSolvedProblems(
   submissions: Submission[],
   contestId: number,
   contestStartTime: number,
-  contestDuration: number
+  contestDuration: number,
 ): Set<string> {
   const solved = new Set<string>();
 
@@ -286,10 +288,10 @@ function getContestSolvedProblems(
 function getProblemSubmissions(
   submissions: Submission[],
   contestId: number,
-  problemIndex: string
+  problemIndex: string,
 ): Submission[] {
   return submissions.filter(
-    (sub) => sub.contestId === contestId && sub.problem.index === problemIndex
+    (sub) => sub.contestId === contestId && sub.problem.index === problemIndex,
   );
 }
 
@@ -303,14 +305,18 @@ function determineStatus(
   contestId: number,
   problemIndex: string,
   contestStartTime: number,
-  contestDuration: number
+  contestDuration: number,
 ): "not_attempted" | "attempted" | "upsolved" {
   // If solved during contest, not a candidate
   if (contestSolvedDuringContest.has(problemId)) {
     return "not_attempted"; // Will be filtered out, but for completeness
   }
 
-  const submissions = getProblemSubmissions(allSubmissions, contestId, problemIndex);
+  const submissions = getProblemSubmissions(
+    allSubmissions,
+    contestId,
+    problemIndex,
+  );
 
   if (submissions.length === 0) {
     return "not_attempted";
@@ -357,12 +363,12 @@ function deduplicateProblems(problems: UpsolveProblem[]): UpsolveProblem[] {
 
 /**
  * Fetch and analyze problems for upsolving
- * 
+ *
  * @param handle - Codeforces user handle
  * @returns Array of problems to upsolve, sorted by rating (ascending)
  */
 export async function getUpsolveProblems(
-  handle: string
+  handle: string,
 ): Promise<UpsolveProblem[]> {
   try {
     console.log(`Fetching upsolve problems for ${handle}...`);
@@ -387,13 +393,13 @@ export async function getUpsolveProblems(
     for (const contest of recentContests) {
       try {
         const { problems } = await getContestStandings(contest.id);
-        
+
         // Get problems solved during contest
         const contestSolved = getContestSolvedProblems(
           allSubmissions,
           contest.id,
           contest.startTimeSeconds,
-          contest.durationSeconds
+          contest.durationSeconds,
         );
 
         // Evaluate each problem
@@ -419,7 +425,7 @@ export async function getUpsolveProblems(
             contest.id,
             problem.index,
             contest.startTimeSeconds,
-            contest.durationSeconds
+            contest.durationSeconds,
           );
 
           // Only include attempted or upsolved problems
@@ -435,7 +441,10 @@ export async function getUpsolveProblems(
           }
         });
       } catch (error) {
-        console.warn(`Failed to fetch standings for contest ${contest.id}:`, error);
+        console.warn(
+          `Failed to fetch standings for contest ${contest.id}:`,
+          error,
+        );
         // Continue with next contest
       }
     }
