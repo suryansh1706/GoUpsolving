@@ -9,7 +9,7 @@
  * - Contest-based filtering
  */
 
-import type { Submission, UpsolveProblem, UserRatingChange } from "../types/codeforces";
+import type { Submission, UserRatingChange } from "../types/codeforces";
 
 // ===== RATING FUNCTIONS =====
 

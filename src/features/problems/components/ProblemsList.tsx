@@ -2,19 +2,16 @@
  * Problems List Component
  */
 
-import React from "react";
 import { ProblemCard } from "./ProblemCard";
 import type { UpsolveProblem } from "../types/codeforces";
 
 interface ProblemsListProps {
   problems: UpsolveProblem[];
-  isLoading: boolean;
   hasData: boolean;
 }
 
 export function ProblemsList({
   problems,
-  isLoading,
   hasData,
 }: ProblemsListProps) {
   return (

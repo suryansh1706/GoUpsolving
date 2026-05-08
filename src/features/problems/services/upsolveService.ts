@@ -19,9 +19,6 @@ import {
   getContestSolvedProblems,
   determineStatus,
   filterContestsLast6Months,
-  getHighestProblemIndexReached,
-  getNextProblemIndex,
-  compareProblemIndices,
 } from "../utils/problemAnalysis";
 
 /**
@@ -29,28 +26,18 @@ import {
  * @param problem - Problem to evaluate
  * @param contestSolved - Set of problems solved during contest
  * @param maxRating - User's maximum rating
- * @param maxIndexToShow - Maximum problem index to include
  * @returns true if problem should be included
  */
 function isEligibleForUpsolving(
   problem: ProblemInfo,
   contestSolved: Set<string>,
-  maxRating: number,
-  maxIndexToShow: string | null
+  maxRating: number
 ): boolean {
   const problemId = `${problem.contestId}-${problem.index}`;
 
   // Skip if already solved during contest
   if (contestSolved.has(problemId)) {
     return false;
-  }
-
-  // Skip if problem index exceeds max allowed
-  if (maxIndexToShow) {
-    const cmp = compareProblemIndices(problem.index, maxIndexToShow);
-    if (cmp > 0) {
-      return false;
-    }
   }
 
   // Skip if problem rating is too high (rated problems only)
@@ -84,21 +71,12 @@ async function collectContestProblems(
       contest.id
     );
 
-    // Find the highest problem index user reached
-    const highestReached = getHighestProblemIndexReached(
-      allSubmissions,
-      contest.id
-    );
-
-    // Calculate the maximum index user should attempt (highest + 1)
-    const maxIndexToShow = highestReached ? getNextProblemIndex(highestReached) : null;
-
     // Evaluate each problem in the contest
     problems.forEach((problem) => {
       const problemId = `${problem.contestId}-${problem.index}`;
 
       // Check if problem is eligible for upsolving
-      if (!isEligibleForUpsolving(problem, contestSolved, maxRating, maxIndexToShow)) {
+      if (!isEligibleForUpsolving(problem, contestSolved, maxRating)) {
         return;
       }
 
@@ -203,8 +181,8 @@ export async function getUpsolveProblems(
     }
 
     // ===== STEP 5: Filter and sort =====
-    // Filter out already upsolved problems - only show problems that need to be solved
-    const filtered = upsolveCandidates.filter(problem => problem.status !== "upsolved");
+    // Show all problems not solved during contest (attempted or not attempted)
+    const filtered = upsolveCandidates.filter(problem => problem.status === "attempted" || problem.status === "not_attempted");
     const sorted = filtered.sort((a, b) => (a.rating || 0) - (b.rating || 0));
 
     return sorted;

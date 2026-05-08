@@ -96,7 +96,6 @@ export function CodeforcesUpsolveTrackerView({
       {/* Problems List */}
       <ProblemsList
         problems={filteredProblems}
-        isLoading={loading}
         hasData={!!data}
       />
     </div>
