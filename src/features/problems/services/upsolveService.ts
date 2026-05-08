@@ -1,12 +1,7 @@
 /**
- * Core Upsolve Problems Service
- * 
- * This service analyzes a Codeforces user's contest history and identifies
  * problems they should upsolve based on:
  * - Contests participated in (from rating history)
- * - Last 6 months of contests
  * - Problems not solved in contests
- * - Problems within index range (up to maxSolved + 1)
  * - Problems with rating <= (maxRating + 200) if rated
  */
 
@@ -18,7 +13,6 @@ import {
   getMaxRating,
   getContestSolvedProblems,
   determineStatus,
-  filterContestsLast6Months,
 } from "../utils/problemAnalysis";
 
 /**
@@ -135,32 +129,22 @@ export async function getUpsolveProblems(
     // ===== STEP 2: Fetch all submissions =====
     const allSubmissions = await codeforcesAPI.getUserSubmissions(handle);
 
-    // ===== STEP 3: Filter recent contests =====
+    // ===== STEP 3: Filter contests user participated in =====
     const allContests = await codeforcesAPI.getContestList();
-    // Try 6 months first, if no results try 12 months
-    let recentContests = filterContestsLast6Months(allContests, 180);
-
-    // Only keep recent contests that user participated in
-    let participatedRecentContests = recentContests.filter((contest) =>
+    
+    // Only keep contests that user participated in
+    const participatedContests = allContests.filter((contest) =>
       participatedContestIds.has(contest.id)
     );
-    
-    // If no recent contests, check if user has older contests
-    if (participatedRecentContests.length === 0 && participatedContestIds.size > 0) {
-      recentContests = filterContestsLast6Months(allContests, 365);
-      participatedRecentContests = recentContests.filter((contest) =>
-        participatedContestIds.has(contest.id)
-      );
-    }
 
     // ===== STEP 4: Collect upsolve candidates from each contest =====
     const upsolveCandidates: UpsolveProblem[] = [];
     
     // Limit to first 20 contests to avoid overwhelming the API/function
-    const maxContestsToProcess = Math.min(participatedRecentContests.length, 20);
+    const maxContestsToProcess = Math.min(participatedContests.length, 20);
 
     for (let i = 0; i < maxContestsToProcess; i++) {
-      const contest = participatedRecentContests[i];
+      const contest = participatedContests[i];
       try {
         const contestProblems = await collectContestProblems(
           contest,
