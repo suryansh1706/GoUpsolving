@@ -16,9 +16,7 @@ interface UseUpsolveProblemsState {
 /**
  * Custom React hook to fetch and manage upsolve problems
  */
-export function useUpsolveProblems(
-  initialHandle?: string
-): UseUpsolveProblemsResult {
+export function useUpsolveProblems(initialHandle?: string): UseUpsolveProblemsResult {
   const [state, setState] = useState<UseUpsolveProblemsState>({
     data: null,
     loading: !!initialHandle,
