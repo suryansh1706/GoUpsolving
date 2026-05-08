@@ -9,75 +9,9 @@
 
 import React, { useState } from "react";
 import { useUpsolveProblems } from "../hooks/useUpsolveProblems";
-import type { UpsolveProblem, ProblemFilters } from "../types/codeforces";
-
-// Child Components
-import { SearchForm } from "./SearchForm";
-import { ErrorDisplay } from "./ErrorDisplay";
-import { StatsSection } from "./StatsSection";
-import { FilterPanel } from "./FilterPanel";
-import { ProblemsList } from "./ProblemsList";
-
-/**
- * Applies status, rating, and tag filters to problems
- */
-function filterProblems(
-  problems: UpsolveProblem[],
-  filters: ProblemFilters
-): UpsolveProblem[] {
-  return problems.filter((problem) => {
-    // Filter by status
-    if (filters.status !== "all" && problem.status !== filters.status) {
-      return false;
-    }
-
-    // Filter by rating range
-    const rating = problem.rating || 0;
-    if (rating < filters.minRating || rating > filters.maxRating) {
-      return false;
-    }
-
-    // Filter by tags (include if problem has ANY of the selected tags)
-    if (
-      filters.tags.length > 0 &&
-      !filters.tags.some((tag) => problem.tags.includes(tag))
-    ) {
-      return false;
-    }
-
-    return true;
-  });
-}
-
-/**
- * Sorts problems by the specified criterion
- */
-function sortProblems(
-  problems: UpsolveProblem[],
-  sortBy: "rating" | "status"
-): UpsolveProblem[] {
-  const sorted = [...problems];
-
-  switch (sortBy) {
-    case "rating":
-      sorted.sort((a, b) => (a.rating || 0) - (b.rating || 0));
-      break;
-    
-    case "status":
-      const statusOrder: Record<string, number> = {
-        not_attempted: 0,
-        attempted: 1,
-        upsolved: 2,
-      };
-      sorted.sort(
-        (a, b) =>
-          (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0)
-      );
-      break;
-  }
-
-  return sorted;
-}
+import type { ProblemFilters } from "../types/codeforces";
+import { filterProblems, sortProblems } from "../utils/problemFiltering";
+import { CodeforcesUpsolveTrackerView } from "./CodeforcesUpsolveTrackerView";
 
 /**
  * Main application component
@@ -136,45 +70,22 @@ export function CodeforcesUpsolveTracker() {
 
   // ===== RENDER =====
   return (
-    <div className="upsolve-tracker">
-      {/* Header */}
-      <header className="tracker-header">
-        <h1>Codeforces Upsolve Tracker</h1>
-        <p>Find problems you should upsolve based on your performance</p>
-      </header>
-
-      {/* Search */}
-      <SearchForm
-        handle={handle}
-        onHandleChange={setHandle}
-        onSearch={handleSearch}
-        loading={loading}
-      />
-
-      {/* Error Display */}
-      <ErrorDisplay error={error} />
-
-      {/* Statistics */}
-      {data && <StatsSection stats={stats} onRefresh={handleRefresh} />}
-
-      {/* Filters */}
-      {data && data.length > 0 && (
-        <FilterPanel
-          filters={filters}
-          onFiltersChange={setFilters}
-          sortBy={sortBy}
-          onSortChange={setSortBy}
-          availableTags={availableTags}
-        />
-      )}
-
-      {/* Problems List */}
-      <ProblemsList
-        problems={filteredProblems}
-        isLoading={loading}
-        hasData={!!data}
-      />
-    </div>
+    <CodeforcesUpsolveTrackerView
+      handle={handle}
+      onHandleChange={setHandle}
+      data={data}
+      loading={loading}
+      error={error}
+      stats={stats}
+      filters={filters}
+      onFiltersChange={setFilters}
+      sortBy={sortBy}
+      onSortChange={setSortBy}
+      filteredProblems={filteredProblems}
+      availableTags={availableTags}
+      onSearch={handleSearch}
+      onRefresh={handleRefresh}
+    />
   );
 }
 
