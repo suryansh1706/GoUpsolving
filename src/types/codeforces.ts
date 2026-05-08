@@ -31,8 +31,6 @@ export interface Contest {
   type: string;
   phase: string;
   frozen: boolean;
-  durationSeconds: number;
-  startTimeSeconds: number;
   relativeTimeSeconds: number;
 }
 

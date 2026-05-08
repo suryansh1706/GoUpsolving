@@ -5,7 +5,7 @@
  * problems they should upsolve based on:
  * - Contests participated in (from rating history)
  * - Last 6 months of contests
- * - Problems not solved during contests
+ * - Problems not solved in contests
  * - Problems within index range (up to maxSolved + 1)
  * - Problems with rating <= (maxRating + 200) if rated
  */
@@ -79,20 +79,16 @@ async function collectContestProblems(
   try {
     const { problems } = await codeforcesAPI.getContestStandings(contest.id);
 
-    // Determine which problems user solved during the contest
+    // Determine which problems user solved in the contest
     const contestSolved = getContestSolvedProblems(
       allSubmissions,
-      contest.id,
-      contest.startTimeSeconds,
-      contest.durationSeconds
+      contest.id
     );
 
     // Find the highest problem index user reached
     const highestReached = getHighestProblemIndexReached(
       allSubmissions,
-      contest.id,
-      contest.startTimeSeconds,
-      contest.durationSeconds
+      contest.id
     );
 
     // Calculate the maximum index user should attempt (highest + 1)
@@ -113,9 +109,7 @@ async function collectContestProblems(
         contestSolved,
         allSubmissions,
         contest.id,
-        problem.index,
-        contest.startTimeSeconds,
-        contest.durationSeconds
+        problem.index
       );
 
       // Add to candidates list
@@ -209,9 +203,11 @@ export async function getUpsolveProblems(
       }
     }
 
-    // ===== STEP 5: Deduplicate and sort =====
+    // ===== STEP 5: Deduplicate, filter, and sort =====
     const deduplicated = deduplicateProblems(upsolveCandidates);
-    const sorted = deduplicated.sort((a, b) => (a.rating || 0) - (b.rating || 0));
+    // Filter out already upsolved problems - only show problems that need to be solved
+    const filtered = deduplicated.filter(problem => problem.status !== "upsolved");
+    const sorted = filtered.sort((a, b) => (a.rating || 0) - (b.rating || 0));
 
     return sorted;
   } catch (error) {

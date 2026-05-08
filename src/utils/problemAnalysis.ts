@@ -48,43 +48,21 @@ export function isAccepted(submission: Submission): boolean {
 }
 
 /**
- * Checks if a submission was made during a contest
- * @param submission - Submission to check
- * @param contestStartTime - Contest start time (unix timestamp)
- * @param contestDuration - Contest duration in seconds
- * @returns true if submission was during contest window
- */
-export function isDuringContest(
-  submission: Submission,
-  contestStartTime: number,
-  contestDuration: number
-): boolean {
-  const submissionTime = submission.creationTimeSeconds;
-  const contestEndTime = contestStartTime + contestDuration;
-  return submissionTime >= contestStartTime && submissionTime <= contestEndTime;
-}
-
-/**
- * Gets all problems solved (AC) during a contest by the user
+ * Gets all problems solved (AC) in a contest by the user
  * @param submissions - All user submissions
  * @param contestId - Contest ID to filter
- * @param contestStartTime - Contest start time
- * @param contestDuration - Contest duration in seconds
  * @returns Set of problem IDs in format "contestId-index"
  */
 export function getContestSolvedProblems(
   submissions: Submission[],
-  contestId: number,
-  contestStartTime: number,
-  contestDuration: number
+  contestId: number
 ): Set<string> {
   const solved = new Set<string>();
 
   submissions.forEach((sub) => {
     if (
       sub.contestId === contestId &&
-      isAccepted(sub) &&
-      isDuringContest(sub, contestStartTime, contestDuration)
+      isAccepted(sub)
     ) {
       solved.add(`${sub.problem.contestId}-${sub.problem.index}`);
     }
@@ -120,9 +98,7 @@ export function determineStatus(
   contestSolvedDuringContest: Set<string>,
   allSubmissions: Submission[],
   contestId: number,
-  problemIndex: string,
-  contestStartTime: number,
-  contestDuration: number
+  problemIndex: string
 ): "not_attempted" | "attempted" | "upsolved" {
   if (contestSolvedDuringContest.has(problemId)) {
     return "not_attempted";
@@ -149,21 +125,16 @@ export function determineStatus(
  * Gets the highest problem index the user reached (solved or attempted) in a contest
  * @param submissions - All user submissions
  * @param contestId - Contest ID
- * @param contestStartTime - Contest start time
- * @param contestDuration - Contest duration in seconds
  * @returns Highest index reached (e.g., "C", "5"), or null if none
  */
 export function getHighestProblemIndexReached(
   submissions: Submission[],
-  contestId: number,
-  contestStartTime: number,
-  contestDuration: number
+  contestId: number
 ): string | null {
   const indices = submissions
     .filter(
       (sub) =>
-        sub.contestId === contestId &&
-        isDuringContest(sub, contestStartTime, contestDuration)
+        sub.contestId === contestId
     )
     .map((sub) => sub.problem.index);
 

@@ -56,8 +56,6 @@ interface Contest {
   type: string;
   phase: string;
   frozen: boolean;
-  durationSeconds: number;
-  startTimeSeconds: number;
   relativeTimeSeconds: number;
 }
 
@@ -85,12 +83,6 @@ interface ContestStanding {
       bestSubmissionTimeSeconds: number;
     }>;
   }>;
-}
-
-interface UpsolveStatus {
-  not_attempted: boolean;
-  attempted: boolean;
-  upsolved: boolean;
 }
 
 export interface UpsolveProblem {
@@ -245,35 +237,21 @@ function isAccepted(submission: Submission): boolean {
   return submission.verdict === "OK";
 }
 
-/**
- * Check if a submission was during a contest
- */
-function isDuringContest(
-  submission: Submission,
-  contestStartTime: number,
-  contestDuration: number,
-): boolean {
-  const submissionTime = submission.creationTimeSeconds;
-  const contestEndTime = contestStartTime + contestDuration;
-  return submissionTime >= contestStartTime && submissionTime <= contestEndTime;
-}
+
 
 /**
- * Get all successful submissions during a contest
+ * Get all successful submissions for a contest
  */
 function getContestSolvedProblems(
   submissions: Submission[],
   contestId: number,
-  contestStartTime: number,
-  contestDuration: number,
 ): Set<string> {
   const solved = new Set<string>();
 
   submissions.forEach((sub) => {
     if (
       sub.contestId === contestId &&
-      isAccepted(sub) &&
-      isDuringContest(sub, contestStartTime, contestDuration)
+      isAccepted(sub)
     ) {
       solved.add(`${sub.problem.contestId}-${sub.problem.index}`);
     }
@@ -304,8 +282,6 @@ function determineStatus(
   allSubmissions: Submission[],
   contestId: number,
   problemIndex: string,
-  contestStartTime: number,
-  contestDuration: number,
 ): "not_attempted" | "attempted" | "upsolved" {
   // If solved during contest, not a candidate
   if (contestSolvedDuringContest.has(problemId)) {
@@ -329,14 +305,6 @@ function determineStatus(
   }
 
   return "attempted";
-}
-
-/**
- * Filter contests from the last 6 months
- */
-function filterContestsLast6Months(contests: Contest[]): Contest[] {
-  const sixMonthsAgo = Math.floor(Date.now() / 1000) - 6 * 30 * 24 * 60 * 60;
-  return contests.filter((contest) => contest.startTimeSeconds > sixMonthsAgo);
 }
 
 /**
@@ -384,22 +352,20 @@ export async function getUpsolveProblems(
 
     // Step 3: Get contests from last 6 months
     const allContests = await getContestList();
-    const recentContests = filterContestsLast6Months(allContests);
-    console.log(`Contests in last 6 months: ${recentContests.length}`);
+    // Use all contests (filtering will happen based on user's participated contests)
+    console.log(`Total contests available: ${allContests.length}`);
 
     // Step 4: Collect all upsolve candidates
     const upsolveCandidates: UpsolveProblem[] = [];
 
-    for (const contest of recentContests) {
+    for (const contest of allContests) {
       try {
         const { problems } = await getContestStandings(contest.id);
 
-        // Get problems solved during contest
+        // Get problems solved in contest
         const contestSolved = getContestSolvedProblems(
           allSubmissions,
-          contest.id,
-          contest.startTimeSeconds,
-          contest.durationSeconds,
+          contest.id
         );
 
         // Evaluate each problem
@@ -423,9 +389,7 @@ export async function getUpsolveProblems(
             contestSolved,
             allSubmissions,
             contest.id,
-            problem.index,
-            contest.startTimeSeconds,
-            contest.durationSeconds,
+            problem.index
           );
 
           // Only include attempted or upsolved problems
