@@ -198,24 +198,3 @@ export function filterContestsLast6Months(contests: any[], daysBack: number = 18
   return contests.filter((contest) => contest.startTimeSeconds > timeAgoSeconds);
 }
 
-/**
- * Removes duplicate problems, keeping the one with highest rating
- * @param problems - Array of problems (may contain duplicates)
- * @returns Deduplicated array
- */
-export function deduplicateProblems(
-  problems: UpsolveProblem[]
-): UpsolveProblem[] {
-  const seen = new Map<string, UpsolveProblem>();
-
-  problems.forEach((problem) => {
-    const key = `${problem.contestId}-${problem.index}`;
-    const existing = seen.get(key);
-
-    if (!existing || (problem.rating || 0) > (existing.rating || 0)) {
-      seen.set(key, problem);
-    }
-  });
-
-  return Array.from(seen.values());
-}

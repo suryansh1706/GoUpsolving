@@ -19,7 +19,6 @@ import {
   getContestSolvedProblems,
   determineStatus,
   filterContestsLast6Months,
-  deduplicateProblems,
   getHighestProblemIndexReached,
   getNextProblemIndex,
   compareProblemIndices,
@@ -203,10 +202,9 @@ export async function getUpsolveProblems(
       }
     }
 
-    // ===== STEP 5: Deduplicate, filter, and sort =====
-    const deduplicated = deduplicateProblems(upsolveCandidates);
+    // ===== STEP 5: Filter and sort =====
     // Filter out already upsolved problems - only show problems that need to be solved
-    const filtered = deduplicated.filter(problem => problem.status !== "upsolved");
+    const filtered = upsolveCandidates.filter(problem => problem.status !== "upsolved");
     const sorted = filtered.sort((a, b) => (a.rating || 0) - (b.rating || 0));
 
     return sorted;

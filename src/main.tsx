@@ -1,10 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { CodeforcesUpsolveTracker } from './components'
-import './styles/error.css'
+import App from './App'
+import './shared/components/error.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <CodeforcesUpsolveTracker />
+    <App />
   </React.StrictMode>,
 )

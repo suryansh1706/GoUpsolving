@@ -307,24 +307,6 @@ function determineStatus(
   return "attempted";
 }
 
-/**
- * Remove duplicate problems (keeping the one with highest rating)
- */
-function deduplicateProblems(problems: UpsolveProblem[]): UpsolveProblem[] {
-  const seen = new Map<string, UpsolveProblem>();
-
-  problems.forEach((problem) => {
-    const key = `${problem.contestId}-${problem.index}`;
-    const existing = seen.get(key);
-
-    if (!existing || (problem.rating || 0) > (existing.rating || 0)) {
-      seen.set(key, problem);
-    }
-  });
-
-  return Array.from(seen.values());
-}
-
 // ============================================================================
 // Main Function
 // ============================================================================
@@ -413,9 +395,8 @@ export async function getUpsolveProblems(
       }
     }
 
-    // Step 5: Deduplicate and sort
-    const deduped = deduplicateProblems(upsolveCandidates);
-    const sorted = deduped.sort((a, b) => (a.rating || 0) - (b.rating || 0));
+    // Step 5: Sort by rating
+    const sorted = upsolveCandidates.sort((a, b) => (a.rating || 0) - (b.rating || 0));
 
     console.log(`Found ${sorted.length} upsolve candidates`);
     return sorted;
