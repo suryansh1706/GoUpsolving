@@ -105,3 +105,21 @@ export function determineStatus(
   return "attempted";
 }
 
+// ===== RATING CLASS FUNCTIONS =====
+
+/**
+ * Gets CSS class name for a problem rating
+ * @param rating - Problem rating
+ * @returns CSS class name (gray, green, cyan, blue, violet, orange, red, maroon)
+ */
+export function getRatingClass(rating: number): string {
+  if (rating < 1200) return "gray";
+  if (rating < 1400) return "green";
+  if (rating < 1600) return "cyan";
+  if (rating < 1900) return "blue";
+  if (rating < 2200) return "violet";
+  if (rating < 2400) return "orange";
+  if (rating < 2600) return "red";
+  return "maroon";
+}
+
