@@ -1,4 +1,4 @@
-import { CodeforcesUpsolveTracker } from "./features/problems/components";
+import { CodeforcesUpsolveTracker } from "./features/components";
 import "./shared/components/global.css";
 
 export function App() {
