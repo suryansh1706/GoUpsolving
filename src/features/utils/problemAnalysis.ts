@@ -46,10 +46,7 @@ export function getContestSolvedProblems(
   const solved = new Set<string>();
 
   submissions.forEach((sub) => {
-    if (
-      sub.contestId === contestId &&
-      isAccepted(sub)
-    ) {
+    if (sub.contestId === contestId && isAccepted(sub)) {
       solved.add(`${sub.problem.contestId}-${sub.problem.index}`);
     }
   });
