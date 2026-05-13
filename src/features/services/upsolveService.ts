@@ -129,7 +129,7 @@ export async function getUpsolveProblems(
     // ===== STEP 2: Fetch all submissions =====
     const allSubmissions = await codeforcesAPI.getUserSubmissions(handle);
 
-    // ===== STEP 3: Filter contests user participated in =====
+    // ===== STEP 3: Fetch all contests and filter to those participated in =====
     const allContests = await codeforcesAPI.getContestList();
     
     // Only keep contests that user participated in
@@ -137,14 +137,10 @@ export async function getUpsolveProblems(
       participatedContestIds.has(contest.id)
     );
 
-    // ===== STEP 4: Collect upsolve candidates from each contest =====
+    // ===== STEP 4: Collect problems to consider for upsolving from each contest =====
     const upsolveCandidates: UpsolveProblem[] = [];
-    
-    // Limit to first 20 contests to avoid overwhelming the API/function
-    const maxContestsToProcess = Math.min(participatedContests.length, 20);
 
-    for (let i = 0; i < maxContestsToProcess; i++) {
-      const contest = participatedContests[i];
+    for (const [index, contest] of participatedContests.entries()) {
       try {
         const contestProblems = await collectContestProblems(
           contest,
@@ -154,7 +150,7 @@ export async function getUpsolveProblems(
         upsolveCandidates.push(...contestProblems);
         
         // Add small delay between requests to prevent overwhelming the API
-        if (i < maxContestsToProcess - 1) {
+        if (index < participatedContests.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       } catch (error) {
