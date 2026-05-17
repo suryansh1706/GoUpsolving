@@ -58,10 +58,7 @@ function isUserNotFoundError(comment: string): boolean {
  * @returns The API response data
  * @throws AppError if the request fails
  */
-async function callAPI<T>(
-  endpoint: string,
-  params: Record<string, any> = {}
-): Promise<T> {
+async function callAPI<T> (endpoint: string, params: Record<string, any> = {}): Promise<T> {
   // --- STEP 1: Check Cache ---
   const cacheKey = `${endpoint}:${JSON.stringify(params)}`;
   
