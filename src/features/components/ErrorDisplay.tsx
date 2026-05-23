@@ -28,49 +28,49 @@ function getErrorContent(error: Error) {
 function getErrorContentByType(type: ErrorType, message: string) {
   const errorConfigs: Record<ErrorType, ReturnType<typeof createErrorConfig>> = {
     [ErrorType.CODEFORCES_API]: createErrorConfig(
-      "🔗 Codeforces Server Issue",
+      "Codeforces Server Issue",
       "Codeforces API is experiencing problems on their end. This is NOT an issue with our application.",
       message,
       "error-codeforces"
     ),
 
     [ErrorType.CODEFORCES_INVALID_USER]: createErrorConfig(
-      "👤 User Not Found",
+      "User Not Found",
       "The Codeforces user could not be found. Please check the username and try again.",
       message,
       "error-codeforces"
     ),
 
     [ErrorType.CODEFORCES_RATE_LIMIT]: createErrorConfig(
-      "⏱️ Rate Limited",
+      "Rate Limited",
       "Codeforces API rate limit has been exceeded. Please wait a few moments and try again.",
       message,
       "error-codeforces-critical"
     ),
 
     [ErrorType.CODEFORCES_TIMEOUT]: createErrorConfig(
-      "⏳ Request Timeout",
+      "Request Timeout",
       "The request to Codeforces took too long. Their servers may be slow. Try again in a moment.",
       message,
       "error-codeforces"
     ),
 
     [ErrorType.NETWORK_ERROR]: createErrorConfig(
-      "📡 Network Error",
+      "Network Error",
       "Unable to reach Codeforces. Please check your internet connection.",
       message,
       "error-network"
     ),
 
     [ErrorType.APPLICATION_ERROR]: createErrorConfig(
-      "⚙️ Application Error",
+      "Application Error",
       "An error occurred while processing your request. This is likely a bug in our application.",
       message,
       "error-app"
     ),
 
     [ErrorType.CACHE_ERROR]: createErrorConfig(
-      "💾 Cache Error",
+      "Cache Error",
       "An error occurred while managing cached data.",
       message,
       "error-cache"
