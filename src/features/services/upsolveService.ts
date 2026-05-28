@@ -136,7 +136,8 @@ async function collectContestProblems(
 async function collectProblemsFromMultipleContests(
   contests: Contest[],
   submissionsByContest: Map<number, Submission[]>,
-  maxRating: number
+  maxRating: number,
+  problemsetByContest: Map<number, ProblemInfo[]> = new Map()
 ): Promise<UpsolveProblem[]> {
   const results: UpsolveProblem[] = [];
   const CONCURRENCY = 5; // Fetch 5 contests at a time
@@ -150,7 +151,7 @@ async function collectProblemsFromMultipleContests(
         submissionsByContest.get(contest.id) || [],
         maxRating,
         // pass cached problems if available
-        (global as any).__problemsetByContest?.get(contest.id)
+        problemsetByContest.get(contest.id)
       ))
     );
 
@@ -239,12 +240,19 @@ export async function getUpsolveProblems(
         if (!problemsetByContest.has(p.contestId)) problemsetByContest.set(p.contestId, []);
         problemsetByContest.get(p.contestId)!.push(p);
       });
-      // Expose to collectProblemsFromMultipleContests via a temporary global to avoid major refactor
-      (global as any).__problemsetByContest = problemsetByContest;
+      const upsolveCandidates = await collectProblemsFromMultipleContests(
+        participatedContests,
+        submissionsByContest,
+        maxRating,
+        problemsetByContest
+      );
+
+      const sorted = upsolveCandidates.sort((a, b) => (a.rating || 0) - (b.rating || 0));
+
+      return sorted;
     } catch (err) {
-      // If problemset fetch fails, we'll fall back to per-contest standings inside collector
+      // If problemset fetch fails, fall back to per-contest standings inside collector
       console.warn("Failed to fetch problemset.problems, falling back to contest.standings per contest.", err);
-      (global as any).__problemsetByContest = new Map<number, ProblemInfo[]>();
     }
 
     const upsolveCandidates = await collectProblemsFromMultipleContests(
@@ -252,9 +260,6 @@ export async function getUpsolveProblems(
       submissionsByContest,
       maxRating
     );
-
-    // Clean up temporary global
-    try { delete (global as any).__problemsetByContest; } catch {};
 
     const sorted = upsolveCandidates.sort((a, b) => (a.rating || 0) - (b.rating || 0));
 
