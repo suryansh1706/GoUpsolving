@@ -165,25 +165,26 @@ export async function getUpsolveProblems(
     // Trim whitespace from handle
     const trimmedHandle = handle.trim();
     
-    // ===== STEP 1: Fetch rating history =====
-    const ratingHistory = await codeforcesAPI.getUserRatingHistory(trimmedHandle);
+    // Fetch rating history and submissions in parallel (they don't depend on each other)
+    const [ratingHistory, allSubmissions] = await Promise.all([
+      codeforcesAPI.getUserRatingHistory(trimmedHandle),
+      codeforcesAPI.getUserSubmissions(trimmedHandle),
+    ]);
+    
     const maxRating = getMaxRating(ratingHistory);
-
-    // Fetch all submissions and contests
-    const allSubmissions = await codeforcesAPI.getUserSubmissions(trimmedHandle);
-    const allContests = await codeforcesAPI.getContestList();
     
     // Only keep contests from last 6 months
     const sixMonthsAgo = Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
-    const recentContestIds = new Set(
-      ratingHistory
-        .filter((r) => (r.ratingUpdateTimeSeconds * 1000) > sixMonthsAgo)
-        .map((r) => r.contestId)
-    );
-    
-    const participatedContests = allContests.filter((contest) =>
-      recentContestIds.has(contest.id)
-    );
+    const participatedContests = ratingHistory
+      .filter((r) => (r.ratingUpdateTimeSeconds * 1000) > sixMonthsAgo)
+      .map((r) => ({
+        id: r.contestId,
+        name: "",
+        type: "",
+        phase: "",
+        frozen: false,
+        relativeTimeSeconds: 0,
+      }));
 
     const upsolveCandidates = await collectProblemsFromMultipleContests(
       participatedContests,
