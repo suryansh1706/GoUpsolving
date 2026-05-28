@@ -84,7 +84,6 @@ async function callAPI<T>(
   // --- Check HTTP status ---
   if (!response.ok) {
     // 403 most likely means Cloudflare blocked the request.
-    // In that case, surface a clear message instead of a generic API error.
     if (response.status === 403) {
       throw new AppError(
         ErrorType.CODEFORCES_API,
@@ -98,6 +97,14 @@ async function callAPI<T>(
         ErrorType.CODEFORCES_RATE_LIMIT,
         "Codeforces rate limit hit. Wait a minute and try again.",
         `HTTP 429 for ${endpoint}`
+      );
+    }
+    // For 400 errors, throw specifically so caller can handle appropriately
+    if (response.status === 400) {
+      throw new AppError(
+        ErrorType.CODEFORCES_API,
+        `HTTP 400 - standings not available`,
+        `HTTP 400 for ${endpoint}`
       );
     }
     throw new AppError(
@@ -152,28 +159,51 @@ async function callAPI<T>(
  */
 export const codeforcesAPI = {
   async getUserRatingHistory(handle: string): Promise<UserRatingChange[]> {
-    return callAPI<UserRatingChange[]>("user.rating", { handle });
+    console.log(`🔗 Calling: user.rating for ${handle}`);
+    const result = await callAPI<UserRatingChange[]>("user.rating", { handle });
+    console.log(`  → Got ${result.length} rating changes`);
+    return result;
   },
 
   async getUserSubmissions(handle: string): Promise<Submission[]> {
-    return callAPI<Submission[]>("user.status", { handle });
+    console.log(`🔗 Calling: user.status for ${handle}`);
+    const result = await callAPI<Submission[]>("user.status", { handle });
+    console.log(`  → Got ${result.length} submissions`);
+    return result;
   },
 
   async getContestList(): Promise<Contest[]> {
-    return callAPI<Contest[]>("contest.list", {});
+    console.log(`🔗 Calling: contest.list`);
+    const result = await callAPI<Contest[]>("contest.list", {});
+    console.log(`  → Got ${result.length} contests`);
+    return result;
   },
 
   async getContestStandings(
     contestId: number
   ): Promise<{ contest: Contest; problems: ProblemInfo[] }> {
-    const response = await callAPI<ContestStanding>("contest.standings", {
-      contestId,
-      from: 1,
-      count: 1,
-    });
-    return {
-      contest: response.contest,
-      problems: response.problems,
-    };
+    try {
+      console.log(`  🔗 Fetching standings for contest ${contestId}...`);
+      const response = await callAPI<ContestStanding>("contest.standings", {
+        contestId,
+        from: 1,
+        count: 1,
+      });
+      console.log(`    → Got ${response.problems.length} problems`);
+      return {
+        contest: response.contest,
+        problems: response.problems,
+      };
+    } catch (error) {
+      // If standings aren't available (HTTP 400), return empty problems array
+      if (error instanceof AppError && error.message.includes("HTTP 400")) {
+        console.log(`    → Standings not available (HTTP 400)`);
+        return {
+          contest: { id: contestId, name: "", type: "", phase: "", frozen: false, relativeTimeSeconds: 0 },
+          problems: [],
+        };
+      }
+      throw error;
+    }
   },
 };

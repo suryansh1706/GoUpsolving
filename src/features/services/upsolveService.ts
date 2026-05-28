@@ -42,13 +42,6 @@ function isEligibleForUpsolving(
   return true;
 }
 
-/**
- * Processes problems from a single contest and collects upsolve candidates
- * @param contest - Contest to process
- * @param allSubmissions - All user submissions
- * @param maxRating - User's maximum rating
- * @returns Array of upsolve problem candidates
- */
 async function collectContestProblems(
   contest: Contest,
   allSubmissions: Submission[],
@@ -56,26 +49,26 @@ async function collectContestProblems(
 ): Promise<UpsolveProblem[]> {
   const candidates: UpsolveProblem[] = [];
 
-  // Skip contests that haven't finished yet - standings aren't available
-  if (contest.phase !== "FINISHED") {
-    return candidates;
-  }
-
-  // Skip practice/special contests that don't have standings (GYM, ICPC, etc)
-  if (contest.type && contest.type !== "CF" && contest.type !== "IOI") {
-    return candidates;
-  }
-
   try {
-    const { problems } = await codeforcesAPI.getContestStandings(contest.id);
+    const response = await codeforcesAPI.getContestStandings(contest.id);
+    const { problems } = response;
+
+    // If standings are unavailable, getContestStandings returns empty array (no error thrown)
+    if (!problems || problems.length === 0) {
+      return candidates;
+    }
+
+    console.log(`    📋 Contest ${contest.id} has ${problems.length} problems`);
 
     // Determine which problems user solved in the contest
     const contestSolved = getContestSolvedProblems(
       allSubmissions,
       contest.id
     );
+    console.log(`    ✅ User solved ${contestSolved.size} problems in contest ${contest.id}`);
 
     // Evaluate each problem in the contest
+    let includedCount = 0;
     problems.forEach((problem) => {
       const problemId = `${problem.contestId}-${problem.index}`;
 
@@ -102,21 +95,16 @@ async function collectContestProblems(
         tags: problem.tags,
         status,
       });
-
+      includedCount++;
     });
-  } catch (error) {
-    // HTTP 400 means standings aren't available (expected for some contests)
-    if (error instanceof AppError && error.message.includes("HTTP 400")) {
-      return candidates;
-    }
 
-    // Gracefully skip contests that require authentication (private/gym contests)
-    if (error instanceof AppError && error.message.includes("authenticated")) {
-      return candidates;
+    console.log(`    ➕ Added ${includedCount}/${problems.length} problems from contest ${contest.id}`);
+
+  } catch (error) {
+    // Only log truly unexpected errors
+    if (error instanceof AppError) {
+      console.error(`    ❌ Error fetching contest ${contest.id}: ${error.message}`);
     }
-    
-    // Only log unexpected errors
-    console.error(`❌ Unexpected error fetching contest ${contest.id}:`, error);
   }
 
   return candidates;
@@ -134,25 +122,34 @@ export async function getUpsolveProblems(
 ): Promise<UpsolveProblem[]> {
   try {
     // ===== STEP 1: Fetch rating history =====
+    console.log(`📊 Fetching rating history for ${handle}...`);
     const ratingHistory = await codeforcesAPI.getUserRatingHistory(handle);
     const maxRating = getMaxRating(ratingHistory);
+    console.log(`✅ Found rating history: ${ratingHistory.length} contests, max rating: ${maxRating}`);
 
     // Extract contest IDs where user participated
     const participatedContestIds = new Set(ratingHistory.map((r) => r.contestId));
+    console.log(`✅ User participated in ${participatedContestIds.size} contests`);
 
     // ===== STEP 2: Fetch all submissions =====
+    console.log(`📝 Fetching all submissions...`);
     const allSubmissions = await codeforcesAPI.getUserSubmissions(handle);
+    console.log(`✅ Found ${allSubmissions.length} total submissions`);
 
     // ===== STEP 3: Fetch all contests and filter to those participated in =====
+    console.log(`🎯 Fetching all contests...`);
     const allContests = await codeforcesAPI.getContestList();
+    console.log(`✅ Found ${allContests.length} total contests`);
     
     // Only keep contests that user participated in
     const participatedContests = allContests.filter((contest) =>
       participatedContestIds.has(contest.id)
     );
+    console.log(`✅ Filtered to ${participatedContests.length} participated contests`);
 
     // ===== STEP 4: Collect problems to consider for upsolving from each contest =====
     const upsolveCandidates: UpsolveProblem[] = [];
+    console.log(`🔍 Collecting problems from each contest...`);
 
     for (const [index, contest] of participatedContests.entries()) {
       try {
@@ -161,6 +158,11 @@ export async function getUpsolveProblems(
           allSubmissions,
           maxRating
         );
+        if (contestProblems.length > 0) {
+          console.log(`  ✅ Contest ${contest.id}: ${contestProblems.length} upsolve candidates`);
+        } else {
+          console.log(`  ⏭️  Contest ${contest.id}: no standings available or all solved`);
+        }
         upsolveCandidates.push(...contestProblems);
         
         // Add small delay between requests to prevent overwhelming the API
@@ -168,20 +170,41 @@ export async function getUpsolveProblems(
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       } catch (error) {
-        // Log but continue - don't let one contest failure stop the whole process
-        console.warn(`⚠️  Skipping contest ${contest.id}: ${error}`);
+        console.error(`❌ Error fetching contest ${contest.id}: ${error}`);
         continue;
       }
     }
 
+    console.log(`✅ Collected ${upsolveCandidates.length} total upsolve candidates`);
+
     // ===== STEP 5: Filter and sort =====
-    // Show all problems not solved during contest (attempted or not attempted)
-    const filtered = upsolveCandidates.filter(problem => problem.status === "attempted" || problem.status === "not_attempted");
+    console.log(`🔎 Filtering problems by status...`);
+    const filtered = upsolveCandidates.filter(problem => 
+      problem.status === "attempted" || problem.status === "not_attempted"
+    );
+    console.log(`  ✅ After status filter: ${filtered.length} problems`);
+
+    // Debug: show status distribution
+    const statusCounts = {
+      attempted: upsolveCandidates.filter(p => p.status === "attempted").length,
+      not_attempted: upsolveCandidates.filter(p => p.status === "not_attempted").length,
+      upsolved: upsolveCandidates.filter(p => p.status === "upsolved").length,
+    };
+    console.log(`  📊 Status breakdown:`, statusCounts);
+
     const sorted = filtered.sort((a, b) => (a.rating || 0) - (b.rating || 0));
+    console.log(`✅ Final result: ${sorted.length} problems to upsolve`);
+
+    if (sorted.length === 0) {
+      console.warn(`⚠️  No problems found! This could mean:`);
+      console.warn(`    - All problems in participated contests were already solved`);
+      console.warn(`    - Contests don't have available standings (HTTP 400)`);
+      console.warn(`    - Check API responses above for details`);
+    }
 
     return sorted;
   } catch (error) {
-    console.error("❌ Error in getUpsolveProblems:", error);
+    console.error("❌ Fatal error in getUpsolveProblems:", error);
     throw error;
   }
 }
