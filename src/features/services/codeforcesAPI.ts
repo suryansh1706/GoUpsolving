@@ -155,15 +155,34 @@ async function callAPI<T>(
 }
 
 /**
+ * Validate if a Codeforces handle exists.
+ * Throws CODEFORCES_INVALID_USER error if handle is invalid.
+ */
+async function validateHandle(handle: string): Promise<void> {
+  try {
+    await callAPI("user.info", { handles: handle });
+  } catch (error) {
+    if (error instanceof AppError && error.type === ErrorType.CODEFORCES_INVALID_USER) {
+      throw error;
+    }
+    throw error;
+  }
+}
+
+/**
  * Public API methods — same interface as before, no changes needed in callers.
  */
 export const codeforcesAPI = {
   async getUserRatingHistory(handle: string): Promise<UserRatingChange[]> {
+    // Validate handle exists before proceeding
+    await validateHandle(handle);
     const result = await callAPI<UserRatingChange[]>("user.rating", { handle });
     return result;
   },
 
   async getUserSubmissions(handle: string): Promise<Submission[]> {
+    // Validate handle exists before proceeding
+    await validateHandle(handle);
     const result = await callAPI<Submission[]>("user.status", { handle });
     return result;
   },
