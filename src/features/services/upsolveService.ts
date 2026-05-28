@@ -82,7 +82,6 @@ async function collectContestProblems(
     );
 
     // Evaluate each problem in the contest
-    let includedCount = 0;
     problems.forEach((problem) => {
       const problemId = `${problem.contestId}-${problem.index}`;
 
@@ -109,7 +108,6 @@ async function collectContestProblems(
         tags: problem.tags,
         status,
       });
-      includedCount++;
     });
 
   } catch (error) {
@@ -237,11 +235,7 @@ export async function getUpsolveProblems(
       maxRating
     );
 
-    const filtered = upsolveCandidates.filter(problem => 
-      problem.status === "attempted" || problem.status === "not_attempted"
-    );
-
-    const sorted = filtered.sort((a, b) => (a.rating || 0) - (b.rating || 0));
+    const sorted = upsolveCandidates.sort((a, b) => (a.rating || 0) - (b.rating || 0));
 
     return sorted;
   } catch (error) {
