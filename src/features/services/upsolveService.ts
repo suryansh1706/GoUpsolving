@@ -25,12 +25,24 @@ import {
 function isEligibleForUpsolving(
   problem: ProblemInfo,
   contestSolved: Set<string>,
+  contestSubmissions: Submission[],
   maxRating: number
 ): boolean {
   const problemId = `${problem.contestId}-${problem.index}`;
 
   // Skip if already solved during contest
   if (contestSolved.has(problemId)) {
+    return false;
+  }
+
+  // Skip if solved later as well (e.g., practice AC after contest)
+  const solvedLater = contestSubmissions.some(
+    (submission) =>
+      submission.problem.contestId === problem.contestId &&
+      submission.problem.index === problem.index &&
+      submission.verdict === "OK"
+  );
+  if (solvedLater) {
     return false;
   }
 
@@ -75,7 +87,7 @@ async function collectContestProblems(
       const problemId = `${problem.contestId}-${problem.index}`;
 
       // Check if problem is eligible for upsolving
-      if (!isEligibleForUpsolving(problem, contestSolved, maxRating)) {
+      if (!isEligibleForUpsolving(problem, contestSolved, contestSubmissions, maxRating)) {
         return;
       }
 
