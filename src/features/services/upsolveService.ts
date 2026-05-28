@@ -160,36 +160,57 @@ export async function getUpsolveProblems(
     // Trim whitespace from handle
     const trimmedHandle = handle.trim();
     
-    // Fetch rating history and submissions in parallel (they don't depend on each other)
-    const [ratingHistory, allSubmissions] = await Promise.all([
+    // Fetch all data in parallel (independent requests)
+    const [ratingHistory, allSubmissions, contestList] = await Promise.all([
       codeforcesAPI.getUserRatingHistory(trimmedHandle),
       codeforcesAPI.getUserSubmissions(trimmedHandle),
+      codeforcesAPI.getContestList(),
     ]);
     
     const maxRating = getMaxRating(ratingHistory);
     
-    // Calculate 6 months ago accurately using Date object
+    // Calculate last-6-month cutoff using calendar months (not fixed 30-day blocks)
     const sixMonthsAgoDate = new Date();
-    sixMonthsAgoDate.setMonth(sixMonthsAgoDate.getMonth() - 6);
+    sixMonthsAgoDate.setUTCMonth(sixMonthsAgoDate.getUTCMonth() - 6);
     const sixMonthsAgoMs = sixMonthsAgoDate.getTime();
+    const sixMonthsAgoSeconds = Math.floor(sixMonthsAgoMs / 1000);
     
-    // Collect contest IDs from both rating history and submissions (last 6 months only)
-    // This ensures we catch contests with 0 rating change but where problems were solved
-    const contestIdSet = new Set<number>();
+    // Build contest-start lookup and only keep contests that officially started in last 6 months
+    const recentContestsById = new Map<number, Contest>();
+    contestList.forEach((contest) => {
+      if (
+        contest.startTimeSeconds !== undefined &&
+        contest.startTimeSeconds >= sixMonthsAgoSeconds
+      ) {
+        recentContestsById.set(contest.id, contest);
+      }
+    });
+
+    // Collect candidate contest IDs from recent activity signals
+    const candidateContestIdSet = new Set<number>();
     
     // Add from rating history (last 6 months)
     ratingHistory
       .filter((r) => (r.ratingUpdateTimeSeconds * 1000) > sixMonthsAgoMs)
-      .forEach((r) => contestIdSet.add(r.contestId));
+      .forEach((r) => candidateContestIdSet.add(r.contestId));
     
     // Add from submissions (last 6 months only)
     allSubmissions
       .filter((s) => (s.creationTimeSeconds * 1000) > sixMonthsAgoMs)
-      .forEach((s) => contestIdSet.add(s.contestId));
+      .forEach((s) => candidateContestIdSet.add(s.contestId));
+
+    // Enforce strict contest-date gating: exclude any contest older than 6 months
+    const recentContestIds = new Set<number>(
+      Array.from(candidateContestIdSet).filter((contestId) =>
+        recentContestsById.has(contestId)
+      )
+    );
     
-    // Filter submissions to only include those from the last 6 months
+    // Keep only submissions from contests that pass the strict 6-month contest-date check
     const recentSubmissions = allSubmissions.filter(
-      (s) => (s.creationTimeSeconds * 1000) > sixMonthsAgoMs
+      (s) =>
+        recentContestIds.has(s.contestId) &&
+        (s.creationTimeSeconds * 1000) > sixMonthsAgoMs
     );
     
     // Pre-filter submissions by contest ID for faster lookups (avoid re-filtering 100+ times)
@@ -201,15 +222,10 @@ export async function getUpsolveProblems(
       submissionsByContest.get(submission.contestId)!.push(submission);
     });
     
-    // Convert to Contest objects
-    const participatedContests = Array.from(contestIdSet).map((contestId) => ({
-      id: contestId,
-      name: "",
-      type: "",
-      phase: "",
-      frozen: false,
-      relativeTimeSeconds: 0,
-    }));
+    // Use canonical contest metadata from contest.list
+    const participatedContests = Array.from(recentContestIds)
+      .map((contestId) => recentContestsById.get(contestId))
+      .filter((contest): contest is Contest => contest !== undefined);
 
     const upsolveCandidates = await collectProblemsFromMultipleContests(
       participatedContests,
