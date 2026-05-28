@@ -24,7 +24,8 @@ export function useUpsolveProblems(initialHandle?: string): UseUpsolveProblemsRe
   });
 
   const fetchProblems = useCallback(async (handle: string) => {
-    if (!handle.trim()) {
+    const trimmedHandle = handle.trim();
+    if (!trimmedHandle) {
       setState({ data: null, loading: false, error: null });
       return;
     }
@@ -32,7 +33,7 @@ export function useUpsolveProblems(initialHandle?: string): UseUpsolveProblemsRe
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const problems = await getUpsolveProblems(handle);
+      const problems = await getUpsolveProblems(trimmedHandle);
       setState({
         data: problems,
         loading: false,
