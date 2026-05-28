@@ -184,10 +184,10 @@ export const codeforcesAPI = {
   ): Promise<{ contest: Contest; problems: ProblemInfo[] }> {
     try {
       console.log(`  🔗 Fetching standings for contest ${contestId}...`);
+      // Don't pass 'from' and 'count' - these are for pagination of rankings
+      // We only need the problems list, which is included regardless
       const response = await callAPI<ContestStanding>("contest.standings", {
         contestId,
-        from: 1,
-        count: 1,
       });
       console.log(`    → Got ${response.problems.length} problems`);
       return {
