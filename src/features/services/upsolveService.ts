@@ -49,7 +49,7 @@ function isEligibleForUpsolving(
 
 async function collectContestProblems(
   contest: Contest,
-  allSubmissions: Submission[],
+  contestSubmissions: Submission[],
   maxRating: number
 ): Promise<UpsolveProblem[]> {
   const candidates: UpsolveProblem[] = [];
@@ -65,7 +65,7 @@ async function collectContestProblems(
 
     // Determine which problems user solved in the contest
     const contestSolved = getContestSolvedProblems(
-      allSubmissions,
+      contestSubmissions,
       contest.id
     );
 
@@ -83,7 +83,7 @@ async function collectContestProblems(
       const status = determineStatus(
         problemId,
         contestSolved,
-        allSubmissions,
+        contestSubmissions,
         contest.id,
         problem.index
       );
@@ -119,7 +119,7 @@ async function collectContestProblems(
  */
 async function collectProblemsFromMultipleContests(
   contests: Contest[],
-  allSubmissions: Submission[],
+  submissionsByContest: Map<number, Submission[]>,
   maxRating: number
 ): Promise<UpsolveProblem[]> {
   const results: UpsolveProblem[] = [];
@@ -130,7 +130,7 @@ async function collectProblemsFromMultipleContests(
     const batch = contests.slice(i, i + CONCURRENCY);
     
     const batchResults = await Promise.allSettled(
-      batch.map((contest) => collectContestProblems(contest, allSubmissions, maxRating))
+      batch.map((contest) => collectContestProblems(contest, submissionsByContest.get(contest.id) || [], maxRating))
     );
     
     batchResults.forEach((result, index) => {
@@ -173,6 +173,15 @@ export async function getUpsolveProblems(
     
     const maxRating = getMaxRating(ratingHistory);
     
+    // Pre-filter submissions by contest ID for faster lookups (avoid re-filtering 100+ times)
+    const submissionsByContest = new Map<number, Submission[]>();
+    allSubmissions.forEach((submission) => {
+      if (!submissionsByContest.has(submission.contestId)) {
+        submissionsByContest.set(submission.contestId, []);
+      }
+      submissionsByContest.get(submission.contestId)!.push(submission);
+    });
+    
     // Only keep contests from last 6 months
     const sixMonthsAgo = Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
     const participatedContests = ratingHistory
@@ -188,7 +197,7 @@ export async function getUpsolveProblems(
 
     const upsolveCandidates = await collectProblemsFromMultipleContests(
       participatedContests,
-      allSubmissions,
+      submissionsByContest,
       maxRating
     );
 
