@@ -168,31 +168,38 @@ export async function getUpsolveProblems(
     
     const maxRating = getMaxRating(ratingHistory);
     
+    // Calculate 6 months ago accurately using Date object
+    const sixMonthsAgoDate = new Date();
+    sixMonthsAgoDate.setMonth(sixMonthsAgoDate.getMonth() - 6);
+    const sixMonthsAgoMs = sixMonthsAgoDate.getTime();
+    
+    // Collect contest IDs from both rating history and submissions (last 6 months only)
+    // This ensures we catch contests with 0 rating change but where problems were solved
+    const contestIdSet = new Set<number>();
+    
+    // Add from rating history (last 6 months)
+    ratingHistory
+      .filter((r) => (r.ratingUpdateTimeSeconds * 1000) > sixMonthsAgoMs)
+      .forEach((r) => contestIdSet.add(r.contestId));
+    
+    // Add from submissions (last 6 months only)
+    allSubmissions
+      .filter((s) => (s.creationTimeSeconds * 1000) > sixMonthsAgoMs)
+      .forEach((s) => contestIdSet.add(s.contestId));
+    
+    // Filter submissions to only include those from the last 6 months
+    const recentSubmissions = allSubmissions.filter(
+      (s) => (s.creationTimeSeconds * 1000) > sixMonthsAgoMs
+    );
+    
     // Pre-filter submissions by contest ID for faster lookups (avoid re-filtering 100+ times)
     const submissionsByContest = new Map<number, Submission[]>();
-    allSubmissions.forEach((submission) => {
+    recentSubmissions.forEach((submission) => {
       if (!submissionsByContest.has(submission.contestId)) {
         submissionsByContest.set(submission.contestId, []);
       }
       submissionsByContest.get(submission.contestId)!.push(submission);
     });
-    
-    // Only keep contests from last 6 months
-    const sixMonthsAgo = Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
-    
-    // Collect contest IDs from both rating history and submissions
-    // This ensures we catch contests with 0 rating change but where problems were solved
-    const contestIdSet = new Set<number>();
-    
-    // Add from rating history
-    ratingHistory
-      .filter((r) => (r.ratingUpdateTimeSeconds * 1000) > sixMonthsAgo)
-      .forEach((r) => contestIdSet.add(r.contestId));
-    
-    // Add from submissions (they may have participated but had 0 rating change)
-    allSubmissions
-      .filter((s) => (s.creationTimeSeconds * 1000) > sixMonthsAgo)
-      .forEach((s) => contestIdSet.add(s.contestId));
     
     // Convert to Contest objects
     const participatedContests = Array.from(contestIdSet).map((contestId) => ({
