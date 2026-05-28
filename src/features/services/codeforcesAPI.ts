@@ -98,8 +98,9 @@ async function callAPI<T>(
         `HTTP 429 for ${endpoint}`
       );
     }
-    // For 400 errors, throw specifically so caller can handle appropriately
-    if (response.status === 400) {
+    // For contest.standings 400 errors, it means standings aren't available for that contest
+    // For other endpoints like user.rating, 400 could mean user not found - let JSON parsing handle it
+    if (response.status === 400 && endpoint.includes("contest.standings")) {
       throw new AppError(
         ErrorType.CODEFORCES_API,
         `HTTP 400 - standings not available`,
