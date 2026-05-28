@@ -98,14 +98,23 @@ async function callAPI<T>(
         `HTTP 429 for ${endpoint}`
       );
     }
-    // For contest.standings 400 errors, it means standings aren't available for that contest
-    // For other endpoints like user.rating, 400 could mean user not found - let JSON parsing handle it
-    if (response.status === 400 && endpoint.includes("contest.standings")) {
-      throw new AppError(
-        ErrorType.CODEFORCES_API,
-        `HTTP 400 - standings not available`,
-        `HTTP 400 for ${endpoint}`
-      );
+    // Handle 400 errors
+    if (response.status === 400) {
+      if (endpoint.includes("user.")) {
+        // user.rating, user.status, user.info return 400 for invalid handle
+        throw new AppError(
+          ErrorType.CODEFORCES_INVALID_USER,
+          "Invalid Codeforces handle provided",
+          `HTTP 400 for ${endpoint}`
+        );
+      }
+      if (endpoint.includes("contest.standings")) {
+        throw new AppError(
+          ErrorType.CODEFORCES_API,
+          `Standings not available for this contest`,
+          `HTTP 400 for ${endpoint}`
+        );
+      }
     }
     throw new AppError(
       ErrorType.CODEFORCES_API,
