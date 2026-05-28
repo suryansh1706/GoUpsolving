@@ -48,6 +48,7 @@ export function getContestSolvedProblems(
   submissions.forEach((sub) => {
     const participantType = sub.author?.participantType;
     const isContestParticipation =
+      participantType === undefined ||
       participantType === "CONTESTANT" ||
       participantType === "VIRTUAL" ||
       participantType === "OUT_OF_COMPETITION";

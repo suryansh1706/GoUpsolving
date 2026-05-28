@@ -15,15 +15,6 @@ import {
   determineStatus,
 } from "../utils/problemAnalysis";
 
-function isContestParticipationSubmission(submission: Submission): boolean {
-  const participantType = submission.author?.participantType;
-  return (
-    participantType === "CONTESTANT" ||
-    participantType === "VIRTUAL" ||
-    participantType === "OUT_OF_COMPETITION"
-  );
-}
-
 /**
  * Filters problems to include only those eligible for upsolving
  * @param problem - Problem to evaluate
@@ -195,35 +186,23 @@ export async function getUpsolveProblems(
       }
     });
 
-    // Collect candidate contest IDs from recent activity signals
-    const candidateContestIdSet = new Set<number>();
-    
-    // Add from rating history (last 6 months)
+    // Step 1: contests participated in last 6 months (from rating history)
+    const participatedContestIdSet = new Set<number>();
+
     ratingHistory
       .filter((r) => (r.ratingUpdateTimeSeconds * 1000) > sixMonthsAgoMs)
-      .forEach((r) => candidateContestIdSet.add(r.contestId));
-    
-    // Add from submissions only when they represent actual contest participation
-    allSubmissions
-      .filter(
-        (s) =>
-          (s.creationTimeSeconds * 1000) > sixMonthsAgoMs &&
-          isContestParticipationSubmission(s)
-      )
-      .forEach((s) => candidateContestIdSet.add(s.contestId));
+      .forEach((r) => participatedContestIdSet.add(r.contestId));
 
     // Enforce strict contest-date gating: exclude any contest older than 6 months
     const recentContestIds = new Set<number>(
-      Array.from(candidateContestIdSet).filter((contestId) =>
+      Array.from(participatedContestIdSet).filter((contestId) =>
         recentContestsById.has(contestId)
       )
     );
     
-    // Keep only submissions from contests that pass the strict 6-month contest-date check
+    // Step 2: collect submissions only for participated contests
     const recentSubmissions = allSubmissions.filter(
-      (s) =>
-        recentContestIds.has(s.contestId) &&
-        (s.creationTimeSeconds * 1000) > sixMonthsAgoMs
+      (s) => recentContestIds.has(s.contestId)
     );
     
     // Pre-filter submissions by contest ID for faster lookups (avoid re-filtering 100+ times)
