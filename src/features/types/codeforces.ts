@@ -15,6 +15,9 @@ export interface Submission {
   creationTimeSeconds: number;
   problem: ProblemInfo;
   verdict: string;
+  author?: {
+    participantType?: "CONTESTANT" | "PRACTICE" | "VIRTUAL" | "OUT_OF_COMPETITION" | "MANAGER";
+  };
 }
 
 export interface ProblemInfo {

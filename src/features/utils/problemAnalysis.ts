@@ -46,7 +46,13 @@ export function getContestSolvedProblems(
   const solved = new Set<string>();
 
   submissions.forEach((sub) => {
-    if (sub.contestId === contestId && isAccepted(sub)) {
+    const participantType = sub.author?.participantType;
+    const isContestParticipation =
+      participantType === "CONTESTANT" ||
+      participantType === "VIRTUAL" ||
+      participantType === "OUT_OF_COMPETITION";
+
+    if (sub.contestId === contestId && isContestParticipation && isAccepted(sub)) {
       solved.add(`${sub.problem.contestId}-${sub.problem.index}`);
     }
   });

@@ -15,6 +15,15 @@ import {
   determineStatus,
 } from "../utils/problemAnalysis";
 
+function isContestParticipationSubmission(submission: Submission): boolean {
+  const participantType = submission.author?.participantType;
+  return (
+    participantType === "CONTESTANT" ||
+    participantType === "VIRTUAL" ||
+    participantType === "OUT_OF_COMPETITION"
+  );
+}
+
 /**
  * Filters problems to include only those eligible for upsolving
  * @param problem - Problem to evaluate
@@ -194,9 +203,13 @@ export async function getUpsolveProblems(
       .filter((r) => (r.ratingUpdateTimeSeconds * 1000) > sixMonthsAgoMs)
       .forEach((r) => candidateContestIdSet.add(r.contestId));
     
-    // Add from submissions (last 6 months only)
+    // Add from submissions only when they represent actual contest participation
     allSubmissions
-      .filter((s) => (s.creationTimeSeconds * 1000) > sixMonthsAgoMs)
+      .filter(
+        (s) =>
+          (s.creationTimeSeconds * 1000) > sixMonthsAgoMs &&
+          isContestParticipationSubmission(s)
+      )
       .forEach((s) => candidateContestIdSet.add(s.contestId));
 
     // Enforce strict contest-date gating: exclude any contest older than 6 months
