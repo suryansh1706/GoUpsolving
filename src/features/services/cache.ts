@@ -10,7 +10,7 @@ interface CacheEntry {
 
 export class APICache {
   private cache: Map<string, CacheEntry> = new Map();
-  private cacheExpiry = 5 * 60 * 1000; // 5 minutes
+  private cacheExpiry = 15 * 60 * 1000; // 15 minutes
 
   set(key: string, data: any): void {
     this.cache.set(key, { data, timestamp: Date.now() });

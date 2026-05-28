@@ -123,7 +123,7 @@ async function collectProblemsFromMultipleContests(
   maxRating: number
 ): Promise<UpsolveProblem[]> {
   const results: UpsolveProblem[] = [];
-  const CONCURRENCY = 5; // Fetch 5 contests at a time (sweet spot: fast without rate limits)
+  const CONCURRENCY = 7; // Fetch 7 contests at a time (tested optimal balance)
   
   // Process contests in small batches
   for (let i = 0; i < contests.length; i += CONCURRENCY) {
@@ -141,11 +141,6 @@ async function collectProblemsFromMultipleContests(
         console.warn(`Rate limited on contest ${batch[index].id}`);
       }
     });
-    
-    // Small delay between batches (be nice to the API)
-    if (i + CONCURRENCY < contests.length) {
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
   }
   
   return results;
