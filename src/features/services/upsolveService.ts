@@ -116,7 +116,7 @@ async function collectContestProblems(
 }
 
 /**
- * Fetches problems from multiple contests in parallel
+ * Fetches problems from multiple contests with rate limit protection
  * @param contests - Contests to fetch problems from
  * @param allSubmissions - All user submissions
  * @param maxRating - User's maximum rating
@@ -128,24 +128,35 @@ async function collectProblemsFromMultipleContests(
   maxRating: number
 ): Promise<UpsolveProblem[]> {
   const results: UpsolveProblem[] = [];
+  const CONCURRENCY = 2; // Fetch 2 contests at a time (safe from rate limits, still fast)
   
-  const batchResults = await Promise.allSettled(
-    contests.map((contest) => collectContestProblems(contest, allSubmissions, maxRating))
-  );
-  
-  batchResults.forEach((result, index) => {
-    if (result.status === "fulfilled") {
-      const contestProblems = result.value;
-      if (contestProblems.length > 0) {
-        console.log(`  ✅ Contest ${contests[index].id}: ${contestProblems.length} upsolve candidates`);
+  // Process contests in small batches
+  for (let i = 0; i < contests.length; i += CONCURRENCY) {
+    const batch = contests.slice(i, i + CONCURRENCY);
+    
+    const batchResults = await Promise.allSettled(
+      batch.map((contest) => collectContestProblems(contest, allSubmissions, maxRating))
+    );
+    
+    batchResults.forEach((result, index) => {
+      if (result.status === "fulfilled") {
+        const contestProblems = result.value;
+        if (contestProblems.length > 0) {
+          console.log(`  ✅ Contest ${batch[index].id}: ${contestProblems.length} upsolve candidates`);
+        } else {
+          console.log(`  ⏭️  Contest ${batch[index].id}: no standings available or all solved`);
+        }
+        results.push(...contestProblems);
       } else {
-        console.log(`  ⏭️  Contest ${contests[index].id}: no standings available or all solved`);
+        console.error(`  ❌ Error fetching contest ${batch[index].id}: ${result.reason}`);
       }
-      results.push(...contestProblems);
-    } else {
-      console.error(`  ❌ Error fetching contest ${contests[index].id}: ${result.reason}`);
+    });
+    
+    // Small delay between batches (be nice to the API)
+    if (i + CONCURRENCY < contests.length) {
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
-  });
+  }
   
   return results;
 }
