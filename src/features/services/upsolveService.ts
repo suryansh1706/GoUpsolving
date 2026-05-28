@@ -123,7 +123,7 @@ async function collectProblemsFromMultipleContests(
   maxRating: number
 ): Promise<UpsolveProblem[]> {
   const results: UpsolveProblem[] = [];
-  const CONCURRENCY = 7; // Fetch 7 contests at a time (tested optimal balance)
+  const CONCURRENCY = 10; // Fetch 10 contests at a time (tested optimal balance)
   
   // Process contests in small batches
   for (let i = 0; i < contests.length; i += CONCURRENCY) {
