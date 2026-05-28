@@ -166,9 +166,6 @@ export async function getUpsolveProblems(
     const ratingHistory = await codeforcesAPI.getUserRatingHistory(handle);
     const maxRating = getMaxRating(ratingHistory);
 
-    // Extract contest IDs where user participated
-    const participatedContestIds = new Set(ratingHistory.map((r) => r.contestId));
-
     // Fetch all submissions and contests
     const allSubmissions = await codeforcesAPI.getUserSubmissions(handle);
     const allContests = await codeforcesAPI.getContestList();
