@@ -116,6 +116,48 @@ async function collectContestProblems(
 }
 
 /**
+ * Fetches problems from multiple contests with concurrency limit
+ * @param contests - Contests to fetch problems from
+ * @param allSubmissions - All user submissions
+ * @param maxRating - User's maximum rating
+ * @param concurrencyLimit - Max number of simultaneous requests
+ * @returns Array of upsolve problems
+ */
+async function collectProblemsFromMultipleContests(
+  contests: Contest[],
+  allSubmissions: Submission[],
+  maxRating: number,
+  concurrencyLimit: number = 5
+): Promise<UpsolveProblem[]> {
+  const results: UpsolveProblem[] = [];
+  
+  // Process contests in batches to maintain concurrency limit
+  for (let i = 0; i < contests.length; i += concurrencyLimit) {
+    const batch = contests.slice(i, i + concurrencyLimit);
+    
+    const batchResults = await Promise.allSettled(
+      batch.map((contest) => collectContestProblems(contest, allSubmissions, maxRating))
+    );
+    
+    batchResults.forEach((result, index) => {
+      if (result.status === "fulfilled") {
+        const contestProblems = result.value;
+        if (contestProblems.length > 0) {
+          console.log(`  ✅ Contest ${batch[index].id}: ${contestProblems.length} upsolve candidates`);
+        } else {
+          console.log(`  ⏭️  Contest ${batch[index].id}: no standings available or all solved`);
+        }
+        results.push(...contestProblems);
+      } else {
+        console.error(`  ❌ Error fetching contest ${batch[index].id}: ${result.reason}`);
+      }
+    });
+  }
+  
+  return results;
+}
+
+/**
  * Fetches and analyzes upsolve problems for a given user
  * 
  * @param handle - Codeforces user handle
@@ -152,33 +194,14 @@ export async function getUpsolveProblems(
     );
     console.log(`✅ Filtered to ${participatedContests.length} participated contests`);
 
-    // ===== STEP 4: Collect problems to consider for upsolving from each contest =====
-    const upsolveCandidates: UpsolveProblem[] = [];
+    // ===== STEP 4: Collect problems from each contest (in parallel, 5 at a time) =====
     console.log(`🔍 Collecting problems from each contest...`);
-
-    for (const [index, contest] of participatedContests.entries()) {
-      try {
-        const contestProblems = await collectContestProblems(
-          contest,
-          allSubmissions,
-          maxRating
-        );
-        if (contestProblems.length > 0) {
-          console.log(`  ✅ Contest ${contest.id}: ${contestProblems.length} upsolve candidates`);
-        } else {
-          console.log(`  ⏭️  Contest ${contest.id}: no standings available or all solved`);
-        }
-        upsolveCandidates.push(...contestProblems);
-        
-        // Add small delay between requests to prevent overwhelming the API
-        if (index < participatedContests.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      } catch (error) {
-        console.error(`❌ Error fetching contest ${contest.id}: ${error}`);
-        continue;
-      }
-    }
+    const upsolveCandidates = await collectProblemsFromMultipleContests(
+      participatedContests,
+      allSubmissions,
+      maxRating,
+      5 // Fetch 5 contests simultaneously
+    );
 
     console.log(`✅ Collected ${upsolveCandidates.length} total upsolve candidates`);
 
