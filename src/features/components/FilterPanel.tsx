@@ -2,7 +2,7 @@
  * Filter Panel Component
  * 
  * Provides UI controls for filtering and sorting problems:
- * - Filter by status (All, Not Attempted, Attempted, Upsolved)
+ * - Filter by status (All, Not Attempted, Attempted)
  * - Filter by rating range
  * - Sort by rating or status
  * - Filter by tags
@@ -41,7 +41,6 @@ export function FilterPanel({
         <option value="all">All</option>
         <option value="not_attempted">Not Attempted</option>
         <option value="attempted">Attempted</option>
-        <option value="upsolved">Upsolved</option>
       </select>
     </div>
   );

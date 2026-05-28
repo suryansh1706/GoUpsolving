@@ -34,8 +34,13 @@ function isEligibleForUpsolving(
     return false;
   }
 
-  // Skip if problem rating is too high (rated problems only)
-  if (problem.rating !== undefined && problem.rating > maxRating + 200) {
+  // Skip if problem rating is not defined
+  if (problem.rating === undefined) {
+    return false;
+  }
+
+  // Skip if problem rating is too high
+  if (problem.rating > maxRating + 200) {
     return false;
   }
 
@@ -188,7 +193,6 @@ export async function getUpsolveProblems(
     const statusCounts = {
       attempted: upsolveCandidates.filter(p => p.status === "attempted").length,
       not_attempted: upsolveCandidates.filter(p => p.status === "not_attempted").length,
-      upsolved: upsolveCandidates.filter(p => p.status === "upsolved").length,
     };
     console.log(`  📊 Status breakdown:`, statusCounts);
 

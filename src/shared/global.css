@@ -233,10 +233,6 @@ body {
   border-left: 4px solid #2196f3;
 }
 
-.problem-card.status-upsolved {
-  border-left: 4px solid #4caf50;
-}
-
 .problem-header {
   display: flex;
   justify-content: space-between;
@@ -268,11 +264,6 @@ body {
 .status-badge.status-not_attempted {
   background: #e3f2fd;
   color: #1565c0;
-}
-
-.status-badge.status-upsolved {
-  background: #e8f5e9;
-  color: #2e7d32;
 }
 
 .problem-meta {

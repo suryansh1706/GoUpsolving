@@ -26,7 +26,6 @@ interface CodeforcesUpsolveTrackerViewProps {
   stats: {
     total: number;
     attempted: number;
-    upsolved: number;
   };
 
   // Filters and sorting

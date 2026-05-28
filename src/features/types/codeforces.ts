@@ -45,7 +45,7 @@ export interface UpsolveProblem {
   name: string;
   rating?: number;
   tags: string[];
-  status: "not_attempted" | "attempted" | "upsolved";
+  status: "not_attempted" | "attempted";
 }
 
 export interface UseUpsolveProblemsResult {
@@ -57,12 +57,11 @@ export interface UseUpsolveProblemsResult {
   stats: {
     total: number;
     attempted: number;
-    upsolved: number;
   };
 }
 
 export interface ProblemFilters {
-  status: "all" | "not_attempted" | "attempted" | "upsolved";
+  status: "all" | "not_attempted" | "attempted";
   minRating: number;
   maxRating: number;
   tags: string[];

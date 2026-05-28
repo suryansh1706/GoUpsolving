@@ -6,7 +6,6 @@ interface StatsSectionProps {
   stats: {
     total: number;
     attempted: number;
-    upsolved: number;
   };
   onRefresh: () => Promise<void>;
 }
@@ -24,10 +23,6 @@ export function StatsSection({
       <div className="stat-card">
         <span className="stat-label">Attempted</span>
         <span className="stat-value">{stats.attempted}</span>
-      </div>
-      <div className="stat-card">
-        <span className="stat-label">Upsolved</span>
-        <span className="stat-value">{stats.upsolved}</span>
       </div>
       <button onClick={onRefresh} className="refresh-button">
         Refresh Data

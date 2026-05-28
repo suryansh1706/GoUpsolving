@@ -59,7 +59,6 @@ export function useUpsolveProblems(initialHandle?: string): UseUpsolveProblemsRe
   const stats = {
     total: state.data?.length ?? 0,
     attempted: state.data?.filter((p) => p.status === "attempted").length ?? 0,
-    upsolved: state.data?.filter((p) => p.status === "upsolved").length ?? 0,
   };
 
   return {

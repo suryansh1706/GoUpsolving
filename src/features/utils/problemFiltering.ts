@@ -43,7 +43,6 @@ export function sortProblems(problems: UpsolveProblem[], sortBy: "rating" | "sta
       const statusOrder: Record<string, number> = {
         not_attempted: 0,
         attempted: 1,
-        upsolved: 2,
       };
       sorted.sort(
         (a, b) =>

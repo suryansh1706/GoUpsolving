@@ -73,8 +73,7 @@ export function getProblemSubmissions(
 
 /**
  * Determines the upsolve status of a problem
- * @returns "not_attempted" if no submissions, "attempted" if tried but no AC,
- *          "upsolved" if AC after the contest ended
+ * @returns "not_attempted" if no submissions, "attempted" if tried but no AC
  */
 export function determineStatus(
   problemId: string,
@@ -82,7 +81,7 @@ export function determineStatus(
   allSubmissions: Submission[],
   contestId: number,
   problemIndex: string
-): "not_attempted" | "attempted" | "upsolved" {
+): "not_attempted" | "attempted" {
   if (contestSolvedDuringContest.has(problemId)) {
     return "not_attempted";
   }
@@ -91,12 +90,6 @@ export function determineStatus(
 
   if (submissions.length === 0) {
     return "not_attempted";
-  }
-
-  const hasAccepted = submissions.some(isAccepted);
-
-  if (hasAccepted) {
-    return "upsolved";
   }
 
   return "attempted";
