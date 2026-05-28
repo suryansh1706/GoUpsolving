@@ -116,43 +116,36 @@ async function collectContestProblems(
 }
 
 /**
- * Fetches problems from multiple contests with concurrency limit
+ * Fetches problems from multiple contests in parallel
  * @param contests - Contests to fetch problems from
  * @param allSubmissions - All user submissions
  * @param maxRating - User's maximum rating
- * @param concurrencyLimit - Max number of simultaneous requests
  * @returns Array of upsolve problems
  */
 async function collectProblemsFromMultipleContests(
   contests: Contest[],
   allSubmissions: Submission[],
-  maxRating: number,
-  concurrencyLimit: number = 5
+  maxRating: number
 ): Promise<UpsolveProblem[]> {
   const results: UpsolveProblem[] = [];
   
-  // Process contests in batches to maintain concurrency limit
-  for (let i = 0; i < contests.length; i += concurrencyLimit) {
-    const batch = contests.slice(i, i + concurrencyLimit);
-    
-    const batchResults = await Promise.allSettled(
-      batch.map((contest) => collectContestProblems(contest, allSubmissions, maxRating))
-    );
-    
-    batchResults.forEach((result, index) => {
-      if (result.status === "fulfilled") {
-        const contestProblems = result.value;
-        if (contestProblems.length > 0) {
-          console.log(`  ✅ Contest ${batch[index].id}: ${contestProblems.length} upsolve candidates`);
-        } else {
-          console.log(`  ⏭️  Contest ${batch[index].id}: no standings available or all solved`);
-        }
-        results.push(...contestProblems);
+  const batchResults = await Promise.allSettled(
+    contests.map((contest) => collectContestProblems(contest, allSubmissions, maxRating))
+  );
+  
+  batchResults.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      const contestProblems = result.value;
+      if (contestProblems.length > 0) {
+        console.log(`  ✅ Contest ${contests[index].id}: ${contestProblems.length} upsolve candidates`);
       } else {
-        console.error(`  ❌ Error fetching contest ${batch[index].id}: ${result.reason}`);
+        console.log(`  ⏭️  Contest ${contests[index].id}: no standings available or all solved`);
       }
-    });
-  }
+      results.push(...contestProblems);
+    } else {
+      console.error(`  ❌ Error fetching contest ${contests[index].id}: ${result.reason}`);
+    }
+  });
   
   return results;
 }
@@ -194,13 +187,12 @@ export async function getUpsolveProblems(
     );
     console.log(`✅ Filtered to ${participatedContests.length} participated contests`);
 
-    // ===== STEP 4: Collect problems from each contest (in parallel, 5 at a time) =====
+    // ===== STEP 4: Collect problems from each contest (in parallel) =====
     console.log(`🔍 Collecting problems from each contest...`);
     const upsolveCandidates = await collectProblemsFromMultipleContests(
       participatedContests,
       allSubmissions,
-      maxRating,
-      5 // Fetch 5 contests simultaneously
+      maxRating
     );
 
     console.log(`✅ Collected ${upsolveCandidates.length} total upsolve candidates`);
