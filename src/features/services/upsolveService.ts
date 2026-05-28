@@ -162,12 +162,15 @@ export async function getUpsolveProblems(
   handle: string
 ): Promise<UpsolveProblem[]> {
   try {
+    // Trim whitespace from handle
+    const trimmedHandle = handle.trim();
+    
     // ===== STEP 1: Fetch rating history =====
-    const ratingHistory = await codeforcesAPI.getUserRatingHistory(handle);
+    const ratingHistory = await codeforcesAPI.getUserRatingHistory(trimmedHandle);
     const maxRating = getMaxRating(ratingHistory);
 
     // Fetch all submissions and contests
-    const allSubmissions = await codeforcesAPI.getUserSubmissions(handle);
+    const allSubmissions = await codeforcesAPI.getUserSubmissions(trimmedHandle);
     const allContests = await codeforcesAPI.getContestList();
     
     // Only keep contests from last 6 months
