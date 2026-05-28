@@ -87,8 +87,7 @@ async function callAPI<T>(
     if (response.status === 403) {
       throw new AppError(
         ErrorType.CODEFORCES_API,
-        "Codeforces blocked the request (Cloudflare 403). " +
-          "Please open codeforces.com in this browser tab first, then try again.",
+        "Codeforces blocked the request (Cloudflare 403). Open https://codeforces.com in this tab first, then try again.",
         `HTTP 403 for ${endpoint}`
       );
     }
