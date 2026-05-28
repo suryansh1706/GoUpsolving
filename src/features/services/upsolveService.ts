@@ -179,16 +179,30 @@ export async function getUpsolveProblems(
     
     // Only keep contests from last 6 months
     const sixMonthsAgo = Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
-    const participatedContests = ratingHistory
+    
+    // Collect contest IDs from both rating history and submissions
+    // This ensures we catch contests with 0 rating change but where problems were solved
+    const contestIdSet = new Set<number>();
+    
+    // Add from rating history
+    ratingHistory
       .filter((r) => (r.ratingUpdateTimeSeconds * 1000) > sixMonthsAgo)
-      .map((r) => ({
-        id: r.contestId,
-        name: "",
-        type: "",
-        phase: "",
-        frozen: false,
-        relativeTimeSeconds: 0,
-      }));
+      .forEach((r) => contestIdSet.add(r.contestId));
+    
+    // Add from submissions (they may have participated but had 0 rating change)
+    allSubmissions
+      .filter((s) => (s.creationTimeSeconds * 1000) > sixMonthsAgo)
+      .forEach((s) => contestIdSet.add(s.contestId));
+    
+    // Convert to Contest objects
+    const participatedContests = Array.from(contestIdSet).map((contestId) => ({
+      id: contestId,
+      name: "",
+      type: "",
+      phase: "",
+      frozen: false,
+      relativeTimeSeconds: 0,
+    }));
 
     const upsolveCandidates = await collectProblemsFromMultipleContests(
       participatedContests,
