@@ -201,6 +201,13 @@ export const codeforcesAPI = {
     return result;
   },
 
+  async getProblemsetProblems(): Promise<ProblemInfo[]> {
+    const result = await callAPI<{ problems: ProblemInfo[] }>("problemset.problems", {});
+    // Some CF responses wrap problems inside result.problems; return that when present
+    if (Array.isArray((result as any).problems)) return (result as any).problems;
+    return result as unknown as ProblemInfo[];
+  },
+
   async getContestStandings(
     contestId: number
   ): Promise<{ contest: Contest; problems: ProblemInfo[] }> {

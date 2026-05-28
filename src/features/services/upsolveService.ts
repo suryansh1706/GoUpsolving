@@ -63,12 +63,18 @@ async function collectContestProblems(
   contest: Contest,
   contestSubmissions: Submission[],
   maxRating: number
+  , cachedProblems?: ProblemInfo[]
 ): Promise<UpsolveProblem[]> {
   const candidates: UpsolveProblem[] = [];
 
   try {
-    const response = await codeforcesAPI.getContestStandings(contest.id);
-    const { problems } = response;
+    let problems: ProblemInfo[] = [];
+    if (cachedProblems && cachedProblems.length > 0) {
+      problems = cachedProblems;
+    } else {
+      const response = await codeforcesAPI.getContestStandings(contest.id);
+      problems = response.problems;
+    }
 
     // If standings are unavailable, getContestStandings returns empty array (no error thrown)
     if (!problems || problems.length === 0) {
@@ -138,11 +144,16 @@ async function collectProblemsFromMultipleContests(
   // Process contests in small batches
   for (let i = 0; i < contests.length; i += CONCURRENCY) {
     const batch = contests.slice(i, i + CONCURRENCY);
-    
     const batchResults = await Promise.allSettled(
-      batch.map((contest) => collectContestProblems(contest, submissionsByContest.get(contest.id) || [], maxRating))
+      batch.map((contest) => collectContestProblems(
+        contest,
+        submissionsByContest.get(contest.id) || [],
+        maxRating,
+        // pass cached problems if available
+        (global as any).__problemsetByContest?.get(contest.id)
+      ))
     );
-    
+
     batchResults.forEach((result, index) => {
       if (result.status === "fulfilled") {
         const contestProblems = result.value;
@@ -220,11 +231,30 @@ export async function getUpsolveProblems(
       .map((contestId) => eligibleContestsById.get(contestId))
       .filter((contest): contest is Contest => contest !== undefined);
 
+    // Fetch global problemset once and map problems to contests to avoid per-contest standings calls
+    try {
+      const allProblems = await codeforcesAPI.getProblemsetProblems();
+      const problemsetByContest = new Map<number, ProblemInfo[]>();
+      allProblems.forEach((p) => {
+        if (!problemsetByContest.has(p.contestId)) problemsetByContest.set(p.contestId, []);
+        problemsetByContest.get(p.contestId)!.push(p);
+      });
+      // Expose to collectProblemsFromMultipleContests via a temporary global to avoid major refactor
+      (global as any).__problemsetByContest = problemsetByContest;
+    } catch (err) {
+      // If problemset fetch fails, we'll fall back to per-contest standings inside collector
+      console.warn("Failed to fetch problemset.problems, falling back to contest.standings per contest.", err);
+      (global as any).__problemsetByContest = new Map<number, ProblemInfo[]>();
+    }
+
     const upsolveCandidates = await collectProblemsFromMultipleContests(
       participatedContests,
       submissionsByContest,
       maxRating
     );
+
+    // Clean up temporary global
+    try { delete (global as any).__problemsetByContest; } catch {};
 
     const sorted = upsolveCandidates.sort((a, b) => (a.rating || 0) - (b.rating || 0));
 
