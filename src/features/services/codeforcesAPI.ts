@@ -1,14 +1,20 @@
 /**
  * Codeforces API Client Service
- * 
- * This service calls our Vercel proxy (/api/codeforces) which then
- * calls the actual Codeforces API. This avoids CORS issues.
- * 
- * Responses are cached for 5 minutes.
+ *
+ * Calls the Codeforces API directly from the browser (no server proxy).
+ * This avoids Cloudflare bot-detection which blocks server-side requests
+ * from Vercel datacenter IPs.
+ *
+ * Browser requests work because:
+ * 1. The user's browser already has a valid Cloudflare clearance cookie
+ *    from visiting codeforces.com normally.
+ * 2. CF API supports CORS for GET requests — no proxy needed.
+ *
+ * Responses are cached in-memory for 5 minutes.
  */
 
 import { apiCache } from "./cache";
-import { AppError, ErrorType, categorizeError } from "../types/errors";
+import { AppError, ErrorType } from "../types/errors";
 import type {
   UserRatingChange,
   Submission,
@@ -17,176 +23,146 @@ import type {
   ProblemInfo,
 } from "../types/codeforces";
 
-const API_PROXY = "/api/codeforces"; // Our Vercel serverless proxy
+const CF_API = "https://codeforces.com/api";
+const REQUEST_TIMEOUT = 15000;
 
 /**
- * HTTP Status Code Messages
- * Helps users understand what went wrong at a glance
+ * Make a direct GET request to the Codeforces API from the browser.
+ * Uses fetch with an AbortController timeout.
  */
-const HTTP_STATUS_MESSAGES: Record<number, string> = {
-  400: "Bad Request",
-  401: "Unauthorized",
-  403: "Forbidden",
-  404: "Not Found",
-  429: "Too Many Requests - Rate Limited",
-  500: "Codeforces Server Error - Their servers are having issues",
-  502: "Bad Gateway - Unable to reach Codeforces",
-  503: "Service Unavailable - Codeforces is temporarily down",
-  504: "Gateway Timeout - Codeforces servers not responding",
-};
-
-/**
- * Get a user-friendly message for an HTTP status code
- */
-function getStatusMessage(status: number): string {
-  return HTTP_STATUS_MESSAGES[status] || "Unknown Error";
-}
-
-/**
- * Check if a Codeforces error message indicates "user not found"
- */
-function isUserNotFoundError(comment: string): boolean {
-  const lowerComment = comment.toLowerCase();
-  return lowerComment.includes("not found") || lowerComment.includes("no such");
-}
-
-/**
- * Make an API call to our Vercel proxy
- * 
- * @param endpoint - Codeforces API endpoint (e.g., "user.rating")
- * @param params - Query parameters to pass
- * @returns The API response data
- * @throws AppError if the request fails
- */
-async function callAPI<T> (endpoint: string, params: Record<string, any> = {}): Promise<T> {
-  // --- STEP 1: Check Cache ---
+async function callAPI<T>(
+  endpoint: string,
+  params: Record<string, any> = {}
+): Promise<T> {
+  // --- Cache check ---
   const cacheKey = `${endpoint}:${JSON.stringify(params)}`;
-  
   if (apiCache.has(cacheKey)) {
     return apiCache.get(cacheKey);
   }
 
-  // --- STEP 2: Build Request ---
-  const queryParams = new URLSearchParams({
-    endpoint,
-    ...Object.entries(params).reduce((acc, [key, value]) => ({
-      ...acc,
-      [key]: String(value),
-    }), {}),
+  // --- Build URL ---
+  const url = new URL(`${CF_API}/${endpoint}`);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      url.searchParams.append(key, String(value));
+    }
   });
 
+  // --- Fetch with timeout ---
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+  let response: Response;
   try {
-    // --- STEP 3: Make Request ---
-    const response = await fetch(`${API_PROXY}?${queryParams.toString()}`);
-
-    // --- STEP 4: Check HTTP Status ---
-    if (!response.ok) {
-      const statusMessage = getStatusMessage(response.status);
+    response = await fetch(url.toString(), {
+      signal: controller.signal,
+      // These headers make the request look more like a real browser visit,
+      // which helps pass Cloudflare checks in case cookies aren't present.
+      headers: {
+        Accept: "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+    });
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err?.name === "AbortError") {
       throw new AppError(
-        ErrorType.CODEFORCES_API,
-        `Codeforces API error: ${statusMessage} (Status ${response.status})`,
-        `Failed to fetch from endpoint: ${endpoint}`
+        ErrorType.CODEFORCES_TIMEOUT,
+        "Request timed out. Codeforces may be slow — try again.",
+        String(err)
       );
     }
-
-    // --- STEP 5: Parse Response ---
-    let json: any;
-    try {
-      json = await response.json();
-    } catch (parseError) {
-      // Response is not valid JSON - get the actual response text for debugging
-      const responseText = await response.text();
-      console.error(`❌ JSON Parse Error for endpoint "${endpoint}"`);
-      console.error(`Response preview: ${responseText.slice(0, 500)}`);
-      console.error(`Full error: ${parseError}`);
-      
-      throw new AppError(
-        ErrorType.CODEFORCES_API,
-        `Invalid response from Codeforces API. Expected JSON but received: ${responseText.slice(0, 100)}`,
-        `JSON Parse Error: ${parseError}`
-      );
-    }
-
-    // --- STEP 6: Check Codeforces Response Status ---
-    if (json.status !== "OK") {
-      const comment = json.comment || "";
-
-      // Special case: user not found
-      if (isUserNotFoundError(comment)) {
-        throw new AppError(
-          ErrorType.CODEFORCES_INVALID_USER,
-          `User not found: ${comment}`,
-          json.comment
-        );
-      }
-
-      // General Codeforces API error
-      throw new AppError(
-        ErrorType.CODEFORCES_API,
-        `Codeforces API error: ${comment || "Unknown error"}`,
-        json.comment
-      );
-    }
-
-    // --- STEP 7: Cache and Return ---
-    apiCache.set(cacheKey, json.result);
-    return json.result;
-
-  } catch (error) {
-    // --- ERROR HANDLING ---
-
-    // Already an AppError - just throw it
-    if (error instanceof AppError) {
-      console.error(`❌ ${error.type}: ${error.message}`);
-      throw error;
-    }
-
-    // Network/fetch error
-    if (error instanceof TypeError && error.message.includes("fetch")) {
-      console.error(`❌ Network Error: ${error.message}`);
-      throw new AppError(
-        ErrorType.NETWORK_ERROR,
-        "Network error: Unable to reach Codeforces API. Please check your internet connection.",
-        error.message
-      );
-    }
-
-    // Unknown error - categorize it
-    const appError = categorizeError(error);
-    console.error(`❌ ${appError.type}: ${appError.message}`);
-    throw appError;
+    throw new AppError(
+      ErrorType.NETWORK_ERROR,
+      "Network error: unable to reach Codeforces. Check your internet connection.",
+      String(err)
+    );
+  } finally {
+    clearTimeout(timeoutId);
   }
+
+  // --- Check HTTP status ---
+  if (!response.ok) {
+    // 403 most likely means Cloudflare blocked the request.
+    // In that case, surface a clear message instead of a generic API error.
+    if (response.status === 403) {
+      throw new AppError(
+        ErrorType.CODEFORCES_API,
+        "Codeforces blocked the request (Cloudflare 403). " +
+          "Please open codeforces.com in this browser tab first, then try again.",
+        `HTTP 403 for ${endpoint}`
+      );
+    }
+    if (response.status === 429) {
+      throw new AppError(
+        ErrorType.CODEFORCES_RATE_LIMIT,
+        "Codeforces rate limit hit. Wait a minute and try again.",
+        `HTTP 429 for ${endpoint}`
+      );
+    }
+    throw new AppError(
+      ErrorType.CODEFORCES_API,
+      `Codeforces returned HTTP ${response.status} for ${endpoint}`,
+      await response.text().catch(() => "")
+    );
+  }
+
+  // --- Parse JSON ---
+  let json: any;
+  try {
+    json = await response.json();
+  } catch (parseErr) {
+    const preview = (await response.text().catch(() => "")).slice(0, 300);
+    // If we got HTML back it's almost certainly a Cloudflare challenge page.
+    const isCloudflare =
+      preview.includes("cloudflare") || preview.startsWith("<!DOCTYPE");
+    throw new AppError(
+      ErrorType.CODEFORCES_API,
+      isCloudflare
+        ? "Cloudflare is blocking the API request. Open codeforces.com in this tab first, then retry."
+        : `Could not parse Codeforces response as JSON. Preview: ${preview.slice(0, 100)}`,
+      String(parseErr)
+    );
+  }
+
+  // --- Check CF response status ---
+  if (json.status !== "OK") {
+    const comment: string = json.comment || "";
+    if (/not found|no such/i.test(comment)) {
+      throw new AppError(
+        ErrorType.CODEFORCES_INVALID_USER,
+        `User not found: ${comment}`,
+        comment
+      );
+    }
+    throw new AppError(
+      ErrorType.CODEFORCES_API,
+      `Codeforces API error: ${comment || "Unknown error"}`,
+      comment
+    );
+  }
+
+  // --- Cache and return ---
+  apiCache.set(cacheKey, json.result);
+  return json.result as T;
 }
 
 /**
- * Public API Methods
+ * Public API methods — same interface as before, no changes needed in callers.
  */
 export const codeforcesAPI = {
-  /**
-   * Get user's rating change history
-   * Shows how their rating changed across contests
-   */
   async getUserRatingHistory(handle: string): Promise<UserRatingChange[]> {
     return callAPI<UserRatingChange[]>("user.rating", { handle });
   },
 
-  /**
-   * Get all user submissions (accepted and attempted)
-   */
   async getUserSubmissions(handle: string): Promise<Submission[]> {
     return callAPI<Submission[]>("user.status", { handle });
   },
 
-  /**
-   * Get list of all contests
-   */
   async getContestList(): Promise<Contest[]> {
     return callAPI<Contest[]>("contest.list", {});
   },
 
-  /**
-   * Get contest standings and problem information
-   */
   async getContestStandings(
     contestId: number
   ): Promise<{ contest: Contest; problems: ProblemInfo[] }> {
@@ -195,7 +171,6 @@ export const codeforcesAPI = {
       from: 1,
       count: 1,
     });
-
     return {
       contest: response.contest,
       problems: response.problems,
