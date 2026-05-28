@@ -192,11 +192,16 @@ export async function getUpsolveProblems(
     const allContests = await codeforcesAPI.getContestList();
     console.log(`✅ Found ${allContests.length} total contests`);
     
-    // Only keep contests that user participated in AND from last 6 months
+    // Only keep contests from last 6 months
     const sixMonthsAgo = Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
+    const recentContestIds = new Set(
+      ratingHistory
+        .filter((r) => (r.ratingUpdateTimeSeconds * 1000) > sixMonthsAgo)
+        .map((r) => r.contestId)
+    );
+    
     const participatedContests = allContests.filter((contest) =>
-      participatedContestIds.has(contest.id) &&
-      (contest.startTimeSeconds * 1000) > sixMonthsAgo
+      recentContestIds.has(contest.id)
     );
     console.log(`✅ Filtered to ${participatedContests.length} participated contests (last 6 months)`);
 
