@@ -179,36 +179,27 @@ export async function getUpsolveProblems(
     
     const maxRating = getMaxRating(ratingHistory);
     
-    // Calculate last-6-month cutoff using calendar months (not fixed 30-day blocks)
-    const sixMonthsAgoDate = new Date();
-    sixMonthsAgoDate.setUTCMonth(sixMonthsAgoDate.getUTCMonth() - 6);
-    const sixMonthsAgoMs = sixMonthsAgoDate.getTime();
-    const sixMonthsAgoSeconds = Math.floor(sixMonthsAgoMs / 1000);
-    
-    // Build contest-start lookup and only keep contests that officially started in last 6 months
-    const recentContestsById = new Map<number, Contest>();
+    // Pre-filter contest list once: keep only contests not older than the rolling 6-month window.
+    const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;
+    const sixMonthsAgoSeconds = Math.floor((Date.now() - SIX_MONTHS_MS) / 1000);
+
+    const eligibleContestsById = new Map<number, Contest>();
     contestList.forEach((contest) => {
       if (
         contest.startTimeSeconds !== undefined &&
         contest.startTimeSeconds >= sixMonthsAgoSeconds
       ) {
-        recentContestsById.set(contest.id, contest);
+        eligibleContestsById.set(contest.id, contest);
       }
     });
 
-    // Step 1: contests participated in last 6 months (from rating history)
-    const participatedContestIdSet = new Set<number>();
-
-    ratingHistory
-      .filter((r) => (r.ratingUpdateTimeSeconds * 1000) > sixMonthsAgoMs)
-      .forEach((r) => participatedContestIdSet.add(r.contestId));
-
-    // Enforce strict contest-date gating: exclude any contest older than 6 months
-    const recentContestIds = new Set<number>(
-      Array.from(participatedContestIdSet).filter((contestId) =>
-        recentContestsById.has(contestId)
-      )
-    );
+    // Step 1: contests participated in (restricted to already-filtered eligible contests)
+    const recentContestIds = new Set<number>();
+    ratingHistory.forEach((r) => {
+      if (eligibleContestsById.has(r.contestId)) {
+        recentContestIds.add(r.contestId);
+      }
+    });
     
     // Step 2: collect submissions only for participated contests
     const recentSubmissions = allSubmissions.filter(
@@ -224,9 +215,9 @@ export async function getUpsolveProblems(
       submissionsByContest.get(submission.contestId)!.push(submission);
     });
     
-    // Use canonical contest metadata from contest.list
+    // Use canonical contest metadata from already eligible contest list
     const participatedContests = Array.from(recentContestIds)
-      .map((contestId) => recentContestsById.get(contestId))
+      .map((contestId) => eligibleContestsById.get(contestId))
       .filter((contest): contest is Contest => contest !== undefined);
 
     const upsolveCandidates = await collectProblemsFromMultipleContests(
