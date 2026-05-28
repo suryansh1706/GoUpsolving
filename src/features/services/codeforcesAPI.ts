@@ -159,23 +159,17 @@ async function callAPI<T>(
  */
 export const codeforcesAPI = {
   async getUserRatingHistory(handle: string): Promise<UserRatingChange[]> {
-    console.log(`🔗 Calling: user.rating for ${handle}`);
     const result = await callAPI<UserRatingChange[]>("user.rating", { handle });
-    console.log(`  → Got ${result.length} rating changes`);
     return result;
   },
 
   async getUserSubmissions(handle: string): Promise<Submission[]> {
-    console.log(`🔗 Calling: user.status for ${handle}`);
     const result = await callAPI<Submission[]>("user.status", { handle });
-    console.log(`  → Got ${result.length} submissions`);
     return result;
   },
 
   async getContestList(): Promise<Contest[]> {
-    console.log(`🔗 Calling: contest.list`);
     const result = await callAPI<Contest[]>("contest.list", {});
-    console.log(`  → Got ${result.length} contests`);
     return result;
   },
 
@@ -183,13 +177,11 @@ export const codeforcesAPI = {
     contestId: number
   ): Promise<{ contest: Contest; problems: ProblemInfo[] }> {
     try {
-      console.log(`  🔗 Fetching standings for contest ${contestId}...`);
       // Don't pass 'from' and 'count' - these are for pagination of rankings
       // We only need the problems list, which is included regardless
       const response = await callAPI<ContestStanding>("contest.standings", {
         contestId,
       });
-      console.log(`    → Got ${response.problems.length} problems`);
       return {
         contest: response.contest,
         problems: response.problems,
@@ -197,7 +189,6 @@ export const codeforcesAPI = {
     } catch (error) {
       // If standings aren't available (HTTP 400), return empty problems array
       if (error instanceof AppError && error.message.includes("HTTP 400")) {
-        console.log(`    → Standings not available (HTTP 400)`);
         return {
           contest: { id: contestId, name: "", type: "", phase: "", frozen: false, relativeTimeSeconds: 0 },
           problems: [],

@@ -103,7 +103,7 @@ async function collectContestProblems(
   } catch (error) {
     // Only log truly unexpected errors
     if (error instanceof AppError) {
-      console.error(`    ❌ Error fetching contest ${contest.id}: ${error.message}`);
+      console.error(`Error fetching contest ${contest.id}: ${error.message}`);
     }
   }
 
@@ -138,7 +138,7 @@ async function collectProblemsFromMultipleContests(
         const contestProblems = result.value;
         results.push(...contestProblems);
       } else if (result.reason instanceof AppError && result.reason.type === "CODEFORCES_RATE_LIMIT") {
-        console.warn(`⚠️  Rate limited on contest ${batch[index].id}`);
+        console.warn(`Rate limited on contest ${batch[index].id}`);
       }
     });
     
@@ -196,7 +196,7 @@ export async function getUpsolveProblems(
 
     return sorted;
   } catch (error) {
-    console.error("❌ Fatal error in getUpsolveProblems:", error);
+    console.error("Fatal error in getUpsolveProblems:", error);
     throw error;
   }
 }
