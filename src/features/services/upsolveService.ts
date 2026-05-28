@@ -128,7 +128,7 @@ async function collectProblemsFromMultipleContests(
   maxRating: number
 ): Promise<UpsolveProblem[]> {
   const results: UpsolveProblem[] = [];
-  const CONCURRENCY = 2; // Fetch 2 contests at a time (safe from rate limits, still fast)
+  const CONCURRENCY = 3; // Fetch 3 contests at a time (balanced speed vs rate limits)
   
   // Process contests in small batches
   for (let i = 0; i < contests.length; i += CONCURRENCY) {
