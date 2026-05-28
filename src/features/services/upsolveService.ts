@@ -56,6 +56,16 @@ async function collectContestProblems(
 ): Promise<UpsolveProblem[]> {
   const candidates: UpsolveProblem[] = [];
 
+  // Skip contests that haven't finished yet - standings aren't available
+  if (contest.phase !== "FINISHED") {
+    return candidates;
+  }
+
+  // Skip practice/special contests that don't have standings (GYM, ICPC, etc)
+  if (contest.type && contest.type !== "CF" && contest.type !== "IOI") {
+    return candidates;
+  }
+
   try {
     const { problems } = await codeforcesAPI.getContestStandings(contest.id);
 
@@ -95,14 +105,18 @@ async function collectContestProblems(
 
     });
   } catch (error) {
+    // HTTP 400 means standings aren't available (expected for some contests)
+    if (error instanceof AppError && error.message.includes("HTTP 400")) {
+      return candidates;
+    }
+
     // Gracefully skip contests that require authentication (private/gym contests)
-    // These are expected and not errors - just skip them silently
     if (error instanceof AppError && error.message.includes("authenticated")) {
       return candidates;
     }
     
-    // Log other errors
-    console.warn(`⚠️  Failed to fetch standings for contest ${contest.id}:`, error);
+    // Only log unexpected errors
+    console.error(`❌ Unexpected error fetching contest ${contest.id}:`, error);
   }
 
   return candidates;
