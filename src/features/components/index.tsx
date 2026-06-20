@@ -29,6 +29,8 @@ export function CodeforcesUpsolveTracker() {
   const [sortBy, setSortBy] = useState<"rating" | "status">("rating");
 
   // ===== DATA FETCHING =====
+
+  // data is problems that should be upsolved, not all problems
   const { data, loading, error, refetch, stats } = useUpsolveProblems(
     submittedHandle
   );

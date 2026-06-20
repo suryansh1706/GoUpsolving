@@ -179,14 +179,13 @@ export async function getUpsolveProblems(
   handle: string
 ): Promise<UpsolveProblem[]> {
   try {
-    // Trim whitespace from handle
     const trimmedHandle = handle.trim();
     
     // Fetch all data in parallel (independent requests)
     const [ratingHistory, allSubmissions, contestList] = await Promise.all([
       codeforcesAPI.getUserRatingHistory(trimmedHandle),
       codeforcesAPI.getUserSubmissions(trimmedHandle),
-      codeforcesAPI.getContestList(),
+      codeforcesAPI.getContestList(), // get literally all contests
     ]);
     
     const maxRating = getMaxRating(ratingHistory);
@@ -195,28 +194,24 @@ export async function getUpsolveProblems(
     const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;
     const sixMonthsAgoSeconds = Math.floor((Date.now() - SIX_MONTHS_MS) / 1000);
 
+    // fetch all existing contests of last 6 months and map by ID for quick lookup
     const eligibleContestsById = new Map<number, Contest>();
     contestList.forEach((contest) => {
-      if (
-        contest.startTimeSeconds !== undefined &&
-        contest.startTimeSeconds >= sixMonthsAgoSeconds
-      ) {
+      if (contest.startTimeSeconds !== undefined && contest.startTimeSeconds >= sixMonthsAgoSeconds) {
         eligibleContestsById.set(contest.id, contest);
       }
     });
 
     // Step 1: contests participated in (restricted to already-filtered eligible contests)
-    const recentContestIds = new Set<number>();
+    const recentRatedContestIds = new Set<number>();
     ratingHistory.forEach((r) => {
       if (eligibleContestsById.has(r.contestId)) {
-        recentContestIds.add(r.contestId);
+        recentRatedContestIds.add(r.contestId);
       }
     });
     
     // Step 2: collect submissions only for participated contests
-    const recentSubmissions = allSubmissions.filter(
-      (s) => recentContestIds.has(s.contestId)
-    );
+    const recentSubmissions = allSubmissions.filter((s) => recentRatedContestIds.has(s.contestId));
     
     // Pre-filter submissions by contest ID for faster lookups (avoid re-filtering 100+ times)
     const submissionsByContest = new Map<number, Submission[]>();
@@ -228,7 +223,7 @@ export async function getUpsolveProblems(
     });
     
     // Use canonical contest metadata from already eligible contest list
-    const participatedContests = Array.from(recentContestIds)
+    const participatedContests = Array.from(recentRatedContestIds)
       .map((contestId) => eligibleContestsById.get(contestId))
       .filter((contest): contest is Contest => contest !== undefined);
 
