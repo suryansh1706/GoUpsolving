@@ -7,7 +7,7 @@
 
 import { codeforcesAPI } from "./codeforcesAPI";
 import { apiCache } from "./cache";
-import type { UpsolveProblem, Contest, Submission, ProblemInfo } from "../types/codeforces";
+import type { UpsolveProblem, Submission, ProblemInfo } from "../types/codeforces";
 import { AppError } from "../types/errors";
 import {
   getMaxRating,
@@ -60,7 +60,7 @@ function isEligibleForUpsolving(
 }
 
 async function collectContestProblems(
-  contest: Contest,
+  contestId: number,
   contestSubmissions: Submission[],
   maxRating: number
   , cachedProblems?: ProblemInfo[]
@@ -72,7 +72,7 @@ async function collectContestProblems(
     if (cachedProblems && cachedProblems.length > 0) {
       problems = cachedProblems;
     } else {
-      const response = await codeforcesAPI.getContestStandings(contest.id);
+      const response = await codeforcesAPI.getContestStandings(contestId);
       problems = response.problems;
     }
 
@@ -84,7 +84,7 @@ async function collectContestProblems(
     // Determine which problems user solved in the contest
     const contestSolved = getContestSolvedProblems(
       contestSubmissions,
-      contest.id
+      contestId
     );
 
     // Evaluate each problem in the contest
@@ -101,7 +101,7 @@ async function collectContestProblems(
         problemId,
         contestSolved,
         contestSubmissions,
-        contest.id,
+        contestId,
         problem.index
       );
 
@@ -119,7 +119,7 @@ async function collectContestProblems(
   } catch (error) {
     // Only log truly unexpected errors
     if (error instanceof AppError) {
-      console.error(`Error fetching contest ${contest.id}: ${error.message}`);
+      console.error(`Error fetching contest ${contestId}: ${error.message}`);
     }
   }
 
@@ -128,13 +128,13 @@ async function collectContestProblems(
 
 /**
  * Fetches problems from multiple contests with rate limit protection
- * @param contests - Contests to fetch problems from
+ * @param contestIds - Contest IDs to fetch problems from
  * @param allSubmissions - All user submissions
  * @param maxRating - User's maximum rating
  * @returns Array of upsolve problems
  */
 async function collectProblemsFromMultipleContests(
-  contests: Contest[],
+  contestIds: number[],
   submissionsByContest: Map<number, Submission[]>,
   maxRating: number,
   problemsetByContest: Map<number, ProblemInfo[]> = new Map()
@@ -143,15 +143,15 @@ async function collectProblemsFromMultipleContests(
   const CONCURRENCY = 5; // Fetch 5 contests at a time
   
   // Process contests in small batches
-  for (let i = 0; i < contests.length; i += CONCURRENCY) {
-    const batch = contests.slice(i, i + CONCURRENCY);
+  for (let i = 0; i < contestIds.length; i += CONCURRENCY) {
+    const batch = contestIds.slice(i, i + CONCURRENCY);
     const batchResults = await Promise.allSettled(
-      batch.map((contest) => collectContestProblems(
-        contest,
-        submissionsByContest.get(contest.id) || [],
+      batch.map((contestId) => collectContestProblems(
+        contestId,
+        submissionsByContest.get(contestId) || [],
         maxRating,
         // pass cached problems if available
-        problemsetByContest.get(contest.id)
+        problemsetByContest.get(contestId)
       ))
     );
 
@@ -160,7 +160,7 @@ async function collectProblemsFromMultipleContests(
         const contestProblems = result.value;
         results.push(...contestProblems);
       } else if (result.reason instanceof AppError && result.reason.type === "CODEFORCES_RATE_LIMIT") {
-        console.warn(`Rate limited on contest ${batch[index].id}`);
+        console.warn(`Rate limited on contest ${batch[index]}`);
       }
     });
   }
@@ -194,18 +194,18 @@ export async function getUpsolveProblems(
     const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;
     const sixMonthsAgoSeconds = Math.floor((Date.now() - SIX_MONTHS_MS) / 1000);
 
-    // fetch all existing contests of last 6 months and map by ID for quick lookup
-    const eligibleContestsById = new Map<number, Contest>();
+    // fetch all existing contests of last 6 months and keep IDs for quick lookup
+    const eligibleContestIds = new Set<number>();
     contestList.forEach((contest) => {
       if (contest.startTimeSeconds !== undefined && contest.startTimeSeconds >= sixMonthsAgoSeconds) {
-        eligibleContestsById.set(contest.id, contest);
+        eligibleContestIds.add(contest.id);
       }
     });
 
     // Step 1: contests participated in (restricted to already-filtered eligible contests)
     const recentRatedContestIds = new Set<number>();
     ratingHistory.forEach((r) => {
-      if (eligibleContestsById.has(r.contestId)) {
+      if (eligibleContestIds.has(r.contestId)) {
         recentRatedContestIds.add(r.contestId);
       }
     });
@@ -222,10 +222,7 @@ export async function getUpsolveProblems(
       submissionsByContest.get(submission.contestId)!.push(submission);
     });
     
-    // Use canonical contest metadata from already eligible contest list
-    const participatedContests = Array.from(recentRatedContestIds)
-      .map((contestId) => eligibleContestsById.get(contestId))
-      .filter((contest): contest is Contest => contest !== undefined);
+    const participatedContestIds = Array.from(recentRatedContestIds);
 
     // Fetch global problemset once and map problems to contests to avoid per-contest standings calls
     try {
@@ -236,7 +233,7 @@ export async function getUpsolveProblems(
         problemsetByContest.get(p.contestId)!.push(p);
       });
       const upsolveCandidates = await collectProblemsFromMultipleContests(
-        participatedContests,
+        participatedContestIds,
         submissionsByContest,
         maxRating,
         problemsetByContest
@@ -251,7 +248,7 @@ export async function getUpsolveProblems(
     }
 
     const upsolveCandidates = await collectProblemsFromMultipleContests(
-      participatedContests,
+      participatedContestIds,
       submissionsByContest,
       maxRating
     );
