@@ -19,7 +19,6 @@ import type {
   UserRatingChange,
   Submission,
   Contest,
-  ContestStanding,
   ProblemInfo,
 } from "../types/codeforces";
 
@@ -208,26 +207,4 @@ export const codeforcesAPI = {
     return result as unknown as ProblemInfo[];
   },
 
-  async getContestStandings(
-    contestId: number
-  ): Promise<{ contest: Contest; problems: ProblemInfo[] }> {
-    try {
-      const response = await callAPI<ContestStanding>("contest.standings", {
-        contestId,
-      });
-      return {
-        contest: response.contest,
-        problems: response.problems,
-      };
-    } catch (error) {
-      // If standings aren't available (HTTP 400), return empty problems array
-      if (error instanceof AppError && error.message.includes("HTTP 400")) {
-        return {
-          contest: { id: contestId, name: "", type: "", phase: "", frozen: false, relativeTimeSeconds: 0 },
-          problems: [],
-        };
-      }
-      throw error;
-    }
-  },
 };

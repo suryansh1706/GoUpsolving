@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { getUpsolveProblems, clearCache } from "../services/upsolveService";
+import { getUpsolveProblems } from "../services/upsolveService";
 import type { UpsolveProblem, UseUpsolveProblemsResult } from "../types/codeforces";
 
 interface UseUpsolveProblemsState {
@@ -65,7 +65,6 @@ export function useUpsolveProblems(initialHandle?: string): UseUpsolveProblemsRe
   return {
     ...state,
     refetch: fetchProblems,
-    clearCachedData: clearCache,
     stats,
   };
 }

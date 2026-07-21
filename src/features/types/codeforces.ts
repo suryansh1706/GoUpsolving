@@ -4,15 +4,11 @@
 
 export interface UserRatingChange {
   contestId: number;
-  contestName: string;
   newRating: number;
-  oldRating: number;
-  ratingUpdateTimeSeconds: number;
 }
 
 export interface Submission {
   contestId: number;
-  creationTimeSeconds: number;
   problem: ProblemInfo;
   verdict: string;
   author?: {
@@ -30,17 +26,7 @@ export interface ProblemInfo {
 
 export interface Contest {
   id: number;
-  name: string;
-  type: string;
-  phase: string;
-  frozen: boolean;
-  relativeTimeSeconds: number;
   startTimeSeconds?: number;
-}
-
-export interface ContestStanding {
-  contest: Contest;
-  problems: ProblemInfo[];
 }
 
 export interface UpsolveProblem {
@@ -57,7 +43,6 @@ export interface UseUpsolveProblemsResult {
   loading: boolean;
   error: Error | null;
   refetch: (handle: string) => Promise<void>;
-  clearCachedData: () => void;
   stats: {
     total: number;
     attempted: number;

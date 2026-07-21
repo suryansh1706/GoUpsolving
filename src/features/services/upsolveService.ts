@@ -6,7 +6,6 @@
  */
 
 import { codeforcesAPI } from "./codeforcesAPI";
-import { apiCache } from "./cache";
 import type { UpsolveProblem, Submission, ProblemInfo } from "../types/codeforces";
 import { AppError } from "../types/errors";
 import { getMaxRating, getContestSolvedProblems, determineStatus } from "../utils/problemAnalysis";
@@ -58,22 +57,13 @@ function isEligibleForUpsolving(
 async function collectContestProblems(
   contestId: number,
   contestSubmissions: Submission[],
-  maxRating: number
-  , cachedProblems?: ProblemInfo[]
+  maxRating: number,
+  problems: ProblemInfo[]
 ): Promise<UpsolveProblem[]> {
   const candidates: UpsolveProblem[] = [];
 
   try {
-    let problems: ProblemInfo[] = [];
-    if (cachedProblems && cachedProblems.length > 0) {
-      problems = cachedProblems;
-    } else {
-      const response = await codeforcesAPI.getContestStandings(contestId);
-      problems = response.problems;
-    }
-
-    // If standings are unavailable, getContestStandings returns empty array (no error thrown)
-    if (!problems || problems.length === 0) {
+    if (problems.length === 0) {
       return candidates;
     }
 
@@ -123,7 +113,7 @@ async function collectContestProblems(
 }
 
 /**
- * Fetches problems from multiple contests with rate limit protection
+ * Collects problems from multiple contests in small batches.
  * @param contestIds - Contest IDs to fetch problems from
  * @param allSubmissions - All user submissions
  * @param maxRating - User's maximum rating
@@ -133,7 +123,7 @@ async function collectProblemsFromMultipleContests(
   contestIds: number[],
   submissionsByContest: Map<number, Submission[]>,
   maxRating: number,
-  problemsetByContest: Map<number, ProblemInfo[]> = new Map()
+  problemsetByContest: Map<number, ProblemInfo[]>
 ): Promise<UpsolveProblem[]> {
   const results: UpsolveProblem[] = [];
   const CONCURRENCY = 5; // Fetch 5 contests at a time
@@ -146,8 +136,7 @@ async function collectProblemsFromMultipleContests(
         contestId,
         submissionsByContest.get(contestId) || [],
         maxRating,
-        // pass cached problems if available
-        problemsetByContest.get(contestId)
+        problemsetByContest.get(contestId) || []
       ))
     );
 
@@ -245,10 +234,3 @@ export async function getUpsolveProblems(handle: string): Promise<UpsolveProblem
   }
 }
 
-/**
- * Clears the API response cache
- * Useful for forcing a refresh of data
- */
-export function clearCache(): void {
-  apiCache.clear();
-}
