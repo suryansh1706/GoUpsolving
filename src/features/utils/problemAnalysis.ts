@@ -25,24 +25,11 @@ export function getMaxRating(ratingHistory: UserRatingChange[]): number {
 // ===== SUBMISSION FUNCTIONS =====
 
 /**
- * Checks if a submission was accepted (AC)
- * @param submission - Submission to check
- * @returns true if verdict is "OK"
- */
-export function isAccepted(submission: Submission): boolean {
-  return submission.verdict === "OK";
-}
-
-/**
  * Gets all problems solved (AC) in a contest by the user
  * @param submissions - All user submissions
- * @param contestId - Contest ID to filter
  * @returns Set of problem IDs in format "contestId-index"
  */
-export function getContestSolvedProblems(
-  submissions: Submission[],
-  contestId: number
-): Set<string> {
+export function getContestSolvedProblems(submissions: Submission[]): Set<string> {
   const solved = new Set<string>();
 
   submissions.forEach((sub) => {
@@ -53,7 +40,7 @@ export function getContestSolvedProblems(
       participantType === "VIRTUAL" ||
       participantType === "OUT_OF_COMPETITION";
 
-    if (sub.contestId === contestId && isContestParticipation && isAccepted(sub)) {
+    if (isContestParticipation && sub.verdict === "OK") {
       solved.add(`${sub.problem.contestId}-${sub.problem.index}`);
     }
   });
@@ -62,44 +49,21 @@ export function getContestSolvedProblems(
 }
 
 /**
- * Gets all submissions for a specific problem by the user
- * @param submissions - All user submissions
- * @param contestId - Contest ID
- * @param problemIndex - Problem index (e.g., "A", "B", "1", etc.)
- * @returns Array of submissions for that problem
- */
-export function getProblemSubmissions(
-  submissions: Submission[],
-  contestId: number,
-  problemIndex: string
-): Submission[] {
-  return submissions.filter(
-    (sub) => sub.contestId === contestId && sub.problem.index === problemIndex
-  );
-}
-
-/**
  * Determines the upsolve status of a problem
  * @returns "not_attempted" if no submissions, "attempted" if tried but no AC
  */
 export function determineStatus(
-  problemId: string,
-  contestSolvedDuringContest: Set<string>,
-  allSubmissions: Submission[],
+  contestSubmissions: Submission[],
   contestId: number,
   problemIndex: string
 ): "not_attempted" | "attempted" {
-  if (contestSolvedDuringContest.has(problemId)) {
-    return "not_attempted";
-  }
-
-  const submissions = getProblemSubmissions(allSubmissions, contestId, problemIndex);
-
-  if (submissions.length === 0) {
-    return "not_attempted";
-  }
-
-  return "attempted";
+  return contestSubmissions.some(
+    (submission) =>
+      submission.contestId === contestId &&
+      submission.problem.index === problemIndex
+  )
+    ? "attempted"
+    : "not_attempted";
 }
 
 // ===== RATING CLASS FUNCTIONS =====

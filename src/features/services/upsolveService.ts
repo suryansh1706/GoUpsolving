@@ -68,15 +68,10 @@ async function collectContestProblems(
     }
 
     // Determine which problems user solved in the contest
-    const contestSolved = getContestSolvedProblems(
-      contestSubmissions,
-      contestId
-    );
+    const contestSolved = getContestSolvedProblems(contestSubmissions);
 
     // Evaluate each problem in the contest
     problems.forEach((problem) => {
-      const problemId = `${problem.contestId}-${problem.index}`;
-
       // Check if problem is eligible for upsolving
       if (!isEligibleForUpsolving(problem, contestSolved, contestSubmissions, maxRating)) {
         return;
@@ -84,8 +79,6 @@ async function collectContestProblems(
 
       // Determine current status of the problem
       const status = determineStatus(
-        problemId,
-        contestSolved,
         contestSubmissions,
         contestId,
         problem.index
