@@ -219,6 +219,8 @@ export async function getUpsolveProblems(handle: string): Promise<UpsolveProblem
 
     // Fetch the global problemset once and group problems by contest.
     const allProblems = await codeforcesAPI.getProblemsetProblems();
+
+    // problemsetByContest = {contest id: [all problems]}
     const problemsetByContest = new Map<number, ProblemInfo[]>();
     allProblems.forEach((problem) => {
       if (!problemsetByContest.has(problem.contestId)) {
