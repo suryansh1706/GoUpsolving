@@ -9,11 +9,7 @@ import { codeforcesAPI } from "./codeforcesAPI";
 import { apiCache } from "./cache";
 import type { UpsolveProblem, Submission, ProblemInfo } from "../types/codeforces";
 import { AppError } from "../types/errors";
-import {
-  getMaxRating,
-  getContestSolvedProblems,
-  determineStatus,
-} from "../utils/problemAnalysis";
+import { getMaxRating, getContestSolvedProblems, determineStatus } from "../utils/problemAnalysis";
 
 /**
  * Filters problems to include only those eligible for upsolving
@@ -175,9 +171,7 @@ async function collectProblemsFromMultipleContests(
  * @returns Array of problems to upsolve, sorted by rating
  * @throws Error if unable to fetch user data
  */
-export async function getUpsolveProblems(
-  handle: string
-): Promise<UpsolveProblem[]> {
+export async function getUpsolveProblems(handle: string): Promise<UpsolveProblem[]> {
   try {
     const trimmedHandle = handle.trim();
     
@@ -195,16 +189,14 @@ export async function getUpsolveProblems(
     const sixMonthsAgoSeconds = Math.floor((Date.now() - SIX_MONTHS_MS) / 1000);
 
     // fetch all existing contests of last 6 months and keep IDs for quick lookup
-    const eligibleContestIds = new Set<number>();
-    contestList.forEach((contest) => {
+    const eligibleContestIds = new Set<number>(); contestList.forEach((contest) => {
       if (contest.startTimeSeconds !== undefined && contest.startTimeSeconds >= sixMonthsAgoSeconds) {
         eligibleContestIds.add(contest.id);
       }
     });
 
     // Step 1: contests participated in (restricted to already-filtered eligible contests)
-    const recentRatedContestIds = new Set<number>();
-    ratingHistory.forEach((r) => {
+    const recentRatedContestIds = new Set<number>(); ratingHistory.forEach((r) => {
       if (eligibleContestIds.has(r.contestId)) {
         recentRatedContestIds.add(r.contestId);
       }
@@ -214,6 +206,7 @@ export async function getUpsolveProblems(
     const recentSubmissions = allSubmissions.filter((s) => recentRatedContestIds.has(s.contestId));
     
     // Pre-filter submissions by contest ID for faster lookups (avoid re-filtering 100+ times)
+    // submissionsByContest = {contest id: [submissions]}
     const submissionsByContest = new Map<number, Submission[]>();
     recentSubmissions.forEach((submission) => {
       if (!submissionsByContest.has(submission.contestId)) {
@@ -224,33 +217,21 @@ export async function getUpsolveProblems(
     
     const participatedContestIds = Array.from(recentRatedContestIds);
 
-    // Fetch global problemset once and map problems to contests to avoid per-contest standings calls
-    try {
-      const allProblems = await codeforcesAPI.getProblemsetProblems();
-      const problemsetByContest = new Map<number, ProblemInfo[]>();
-      allProblems.forEach((p) => {
-        if (!problemsetByContest.has(p.contestId)) problemsetByContest.set(p.contestId, []);
-        problemsetByContest.get(p.contestId)!.push(p);
-      });
-      const upsolveCandidates = await collectProblemsFromMultipleContests(
-        participatedContestIds,
-        submissionsByContest,
-        maxRating,
-        problemsetByContest
-      );
-
-      const sorted = upsolveCandidates.sort((a, b) => (a.rating || 0) - (b.rating || 0));
-
-      return sorted;
-    } catch (err) {
-      // If problemset fetch fails, fall back to per-contest standings inside collector
-      console.warn("Failed to fetch problemset.problems, falling back to contest.standings per contest.", err);
-    }
+    // Fetch the global problemset once and group problems by contest.
+    const allProblems = await codeforcesAPI.getProblemsetProblems();
+    const problemsetByContest = new Map<number, ProblemInfo[]>();
+    allProblems.forEach((problem) => {
+      if (!problemsetByContest.has(problem.contestId)) {
+        problemsetByContest.set(problem.contestId, []);
+      }
+      problemsetByContest.get(problem.contestId)!.push(problem);
+    });
 
     const upsolveCandidates = await collectProblemsFromMultipleContests(
       participatedContestIds,
       submissionsByContest,
-      maxRating
+      maxRating,
+      problemsetByContest
     );
 
     const sorted = upsolveCandidates.sort((a, b) => (a.rating || 0) - (b.rating || 0));
