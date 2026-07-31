@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import type { UpsolveProblem, ProblemFilters } from "../types/codeforces";
+import type { UpsolveProblem, ProblemFilters, SortOption } from "../types/codeforces";
 
 // Child Components
 import { SearchForm } from "./SearchForm";
@@ -31,8 +31,9 @@ interface CodeforcesUpsolveTrackerViewProps {
   // Filters and sorting
   filters: ProblemFilters;
   onFiltersChange: (filters: ProblemFilters) => void;
-  sortBy: "rating" | "status";
-  onSortChange: (sortBy: "rating" | "status") => void;
+  sortBy: SortOption;
+  onSortChange: (sortBy: SortOption) => void;
+
 
   // Derived data
   filteredProblems: UpsolveProblem[];

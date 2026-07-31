@@ -9,7 +9,7 @@
 
 import React, { useState } from "react";
 import { useUpsolveProblems } from "../hooks/useUpsolveProblems";
-import type { ProblemFilters } from "../types/codeforces";
+import type { ProblemFilters, SortOption } from "../types/codeforces";
 import { filterProblems, sortProblems } from "../utils/problemFiltering";
 import { CodeforcesUpsolveTrackerView } from "./CodeforcesUpsolveTrackerView";
 
@@ -26,7 +26,8 @@ export function CodeforcesUpsolveTracker() {
     maxRating: 3500,
     tags: [],
   });
-  const [sortBy, setSortBy] = useState<"rating" | "status">("rating");
+  const [sortBy, setSortBy] = useState<SortOption>("recent");
+
 
   // ===== DATA FETCHING =====
 

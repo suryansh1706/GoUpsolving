@@ -8,13 +8,13 @@
  * - Filter by tags
  */
 
-import type { ProblemFilters } from "../types/codeforces";
+import type { ProblemFilters, SortOption } from "../types/codeforces";
 
 interface FilterPanelProps {
   filters: ProblemFilters;
   onFiltersChange: (filters: ProblemFilters) => void;
-  sortBy: "rating" | "status";
-  onSortChange: (sort: "rating" | "status") => void;
+  sortBy: SortOption;
+  onSortChange: (sort: SortOption) => void;
   availableTags: string[];
 }
 
@@ -86,12 +86,14 @@ export function FilterPanel({
   const renderSortFilter = () => (
     <div className="filter-group">
       <label>Sort By:</label>
-      <select value={sortBy} onChange={(e) => onSortChange(e.target.value as any)}>
+      <select value={sortBy} onChange={(e) => onSortChange(e.target.value as SortOption)}>
+        <option value="recent">Most Recent</option>
         <option value="rating">Rating (Low to High)</option>
         <option value="status">Status</option>
       </select>
     </div>
   );
+
 
   // ===== Tags Filter =====
   const renderTagsFilter = () => {

@@ -55,3 +55,5 @@ export interface ProblemFilters {
   maxRating: number;
   tags: string[];
 }
+
+export type SortOption = "recent" | "rating" | "status";

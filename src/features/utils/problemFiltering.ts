@@ -1,4 +1,4 @@
-import type { UpsolveProblem, ProblemFilters } from "../types/codeforces";
+import type { UpsolveProblem, ProblemFilters, SortOption } from "../types/codeforces";
 
 /**
  * Applies status, rating, and tag filters to problems
@@ -31,10 +31,19 @@ export function filterProblems(problems: UpsolveProblem[], filters: ProblemFilte
 /**
  * Sorts problems by the specified criterion
  */
-export function sortProblems(problems: UpsolveProblem[], sortBy: "rating" | "status"): UpsolveProblem[] {
+export function sortProblems(problems: UpsolveProblem[], sortBy: SortOption): UpsolveProblem[] {
   const sorted = [...problems];
 
   switch (sortBy) {
+    case "recent":
+      sorted.sort((a, b) => {
+        if (b.contestId !== a.contestId) {
+          return b.contestId - a.contestId;
+        }
+        return a.index.localeCompare(b.index);
+      });
+      break;
+
     case "rating":
       sorted.sort((a, b) => (a.rating || 0) - (b.rating || 0));
       break;
@@ -53,3 +62,4 @@ export function sortProblems(problems: UpsolveProblem[], sortBy: "rating" | "sta
 
   return sorted;
 }
+
