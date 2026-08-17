@@ -164,11 +164,6 @@ body {
   text-align: center;
   border: 1px solid var(--border-muted);
   border-left: 4px solid var(--primary-green);
-  transition: border-color 0.15s ease;
-}
-
-.stat-card:hover {
-  border-color: var(--primary-green);
 }
 
 .stat-label {
