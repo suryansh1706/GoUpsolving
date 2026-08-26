@@ -107,13 +107,6 @@ async function callAPI<T>(
           `HTTP 400 for ${endpoint}`
         );
       }
-      if (endpoint.includes("contest.standings")) {
-        throw new AppError(
-          ErrorType.CODEFORCES_API,
-          `Standings not available for this contest`,
-          `HTTP 400 for ${endpoint}`
-        );
-      }
     }
     throw new AppError(
       ErrorType.CODEFORCES_API,
@@ -206,5 +199,4 @@ export const codeforcesAPI = {
     if (Array.isArray((result as any).problems)) return (result as any).problems;
     return result as unknown as ProblemInfo[];
   },
-
 };

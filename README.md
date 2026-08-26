@@ -155,6 +155,10 @@ frontend project/
 - **Problem**: Repeatedly changing filters or refetching identical handle data wasted network bandwidth.
 - **Solution**: Implemented an in-memory `APICache` class with a 15-minute Time-To-Live (TTL). Cache keys are generated dynamically based on endpoint and query parameters (`${endpoint}:${JSON.stringify(params)}`).
 
+### 5. Streamlined Single-Query Problemset Retrieval
+- **Optimization**: Standardized problem discovery by leveraging a single global `problemset.problems` request pre-grouped by `contestId` in $O(1)$ Hash Maps. This completely eliminates redundant per-contest standings API calls (`contest.standings`), keeping network overhead minimal and data processing instantaneous.
+
+
 ---
 
 ## 🎯 Interview Q&A Cheat Sheet
